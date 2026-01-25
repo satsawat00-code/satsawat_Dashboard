@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LPR & ETC Performance Dashboard (Unlocked)</title>
+    
+    <!-- Dependencies (โหลดจาก CDN ที่เสถียรที่สุด) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
+        .log-box { background: #0f172a; color: #4ade80; font-family: 'Courier New', monospace; padding: 1rem; border-radius: 8px; height: 150px; overflow-y: auto; font-size: 11px; margin-top: 1rem; border: 1px solid #334155; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+        const { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, ReferenceLine, PieChart, Pie, Cell } = window.Recharts;
+
+        // --- Icons (Embedded SVG) ---
+        const Icons = {
+            Layout: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,
+            Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>,
+            Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><polyline points="20 6 9 17 4 12"/></svg>,
+            Alert: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+            Activity: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+            Zap: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+            Trending: () => <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+            Car: () => <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>,
+            Shield: () => <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+            File: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>,
+            Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        };
+
+        // --- Config ---
+        const KPI_LPR = 90.25;
+        const KPI_ETC = 98.00;
+
+        // --- Helper: Parse & Format ---
+        const parseThaiDate = (dateStr) => {
+            if (!dateStr) return null;
+            const parts = dateStr.split(/[\/\-]/); 
+            if (parts.length !== 3) return null;
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1; 
+            let year = parseInt(parts[2], 10);
+            if (year > 2400) year -= 543;
+            return new Date(year, month, day);
+        };
+
+        const parseNumber = (str) => {
+            if (!str) return 0;
+            return parseFloat(str.replace(/,/g, ''));
+        };
+
+        const renderPct = (amount, total) => {
+            if (!amount || total === 0) return '0.00%';
+            return ((amount / total) * 100).toFixed(2) + '%';
+        };
+
+        // --- INITIAL DATA (15 Days) ---
+        const INITIAL_LPR_DATA = [
+            { id: 1, dateRaw: '06/01/2569', totalTransaction: 127473, autoMatchAmount: 119257, inputMatchAmount: 2412, inputPlazaAmount: 5804 },
+            { id: 2, dateRaw: '07/01/2569', totalTransaction: 128952, autoMatchAmount: 121447, inputMatchAmount: 2522, inputPlazaAmount: 4983 },
+            { id: 3, dateRaw: '08/01/2569', totalTransaction: 129280, autoMatchAmount: 121749, inputMatchAmount: 2455, inputPlazaAmount: 5076 },
+            { id: 4, dateRaw: '09/01/2569', totalTransaction: 137342, autoMatchAmount: 128974, inputMatchAmount: 2557, inputPlazaAmount: 5811 },
+            { id: 5, dateRaw: '10/01/2569', totalTransaction: 124923, autoMatchAmount: 117318, inputMatchAmount: 2351, inputPlazaAmount: 5254 },
+            { id: 6, dateRaw: '11/01/2569', totalTransaction: 93530, autoMatchAmount: 88525, inputMatchAmount: 1858, inputPlazaAmount: 3147 },
+            { id: 7, dateRaw: '12/01/2569', totalTransaction: 130754, autoMatchAmount: 123851, inputMatchAmount: 2489, inputPlazaAmount: 4414 },
+            { id: 8, dateRaw: '13/01/2569', totalTransaction: 128820, autoMatchAmount: 122196, inputMatchAmount: 2433, inputPlazaAmount: 4191 },
+            { id: 9, dateRaw: '14/01/2569', totalTransaction: 128139, autoMatchAmount: 121518, inputMatchAmount: 2492, inputPlazaAmount: 4129 },
+            { id: 10, dateRaw: '15/01/2569', totalTransaction: 129321, autoMatchAmount: 122595, inputMatchAmount: 2373, inputPlazaAmount: 4353 },
+            { id: 11, dateRaw: '16/01/2569', totalTransaction: 132554, autoMatchAmount: 125552, inputMatchAmount: 2442, inputPlazaAmount: 4560 },
+            { id: 12, dateRaw: '17/01/2569', totalTransaction: 118260, autoMatchAmount: 112005, inputMatchAmount: 2318, inputPlazaAmount: 3937 },
+            { id: 13, dateRaw: '18/01/2569', totalTransaction: 91304, autoMatchAmount: 86840, inputMatchAmount: 1726, inputPlazaAmount: 2738 },
+            { id: 14, dateRaw: '19/01/2569', totalTransaction: 126567, autoMatchAmount: 120291, inputMatchAmount: 2314, inputPlazaAmount: 3962 },
+            { id: 15, dateRaw: '20/01/2569', totalTransaction: 79281, autoMatchAmount: 75723, inputMatchAmount: 1334, inputPlazaAmount: 2224 },
+        ].map(d => processRawRow(d, 'LPR'));
+
+        const INITIAL_ETC_DATA = [
+            { id: 1, dateRaw: '06/01/2569', totalTransaction: 93728, etcAutoAmount: 89129, etcInputEntryAmount: 713, etcAutoLprAmount: 84, etcInputLprAmount: 3569, inputPlazaAmount: 233 },
+            { id: 2, dateRaw: '07/01/2569', totalTransaction: 94518, etcAutoAmount: 89799, etcInputEntryAmount: 820, etcAutoLprAmount: 110, etcInputLprAmount: 3518, inputPlazaAmount: 271 },
+            { id: 3, dateRaw: '08/01/2569', totalTransaction: 95283, etcAutoAmount: 90393, etcInputEntryAmount: 845, etcAutoLprAmount: 117, etcInputLprAmount: 3706, inputPlazaAmount: 222 },
+            { id: 4, dateRaw: '09/01/2569', totalTransaction: 99092, etcAutoAmount: 93774, etcInputEntryAmount: 839, etcAutoLprAmount: 115, etcInputLprAmount: 3999, inputPlazaAmount: 365 },
+            { id: 5, dateRaw: '10/01/2569', totalTransaction: 81929, etcAutoAmount: 76733, etcInputEntryAmount: 714, etcAutoLprAmount: 130, etcInputLprAmount: 3997, inputPlazaAmount: 355 },
+            { id: 6, dateRaw: '11/01/2569', totalTransaction: 64881, etcAutoAmount: 60786, etcInputEntryAmount: 459, etcAutoLprAmount: 148, etcInputLprAmount: 3261, inputPlazaAmount: 227 },
+            { id: 7, dateRaw: '12/01/2569', totalTransaction: 93904, etcAutoAmount: 89172, etcInputEntryAmount: 735, etcAutoLprAmount: 171, etcInputLprAmount: 3627, inputPlazaAmount: 199 },
+            { id: 8, dateRaw: '13/01/2569', totalTransaction: 93930, etcAutoAmount: 89416, etcInputEntryAmount: 729, etcAutoLprAmount: 120, etcInputLprAmount: 3497, inputPlazaAmount: 168 },
+            { id: 9, dateRaw: '14/01/2569', totalTransaction: 93593, etcAutoAmount: 88920, etcInputEntryAmount: 839, etcAutoLprAmount: 150, etcInputLprAmount: 3463, inputPlazaAmount: 221 },
+            { id: 10, dateRaw: '15/01/2569', totalTransaction: 94716, etcAutoAmount: 90174, etcInputEntryAmount: 733, etcAutoLprAmount: 153, etcInputLprAmount: 3500, inputPlazaAmount: 156 },
+            { id: 11, dateRaw: '16/01/2569', totalTransaction: 95577, etcAutoAmount: 90839, etcInputEntryAmount: 717, etcAutoLprAmount: 864, etcInputLprAmount: 2983, inputPlazaAmount: 174 },
+            { id: 12, dateRaw: '17/01/2569', totalTransaction: 78794, etcAutoAmount: 74566, etcInputEntryAmount: 559, etcAutoLprAmount: 2151, etcInputLprAmount: 1339, inputPlazaAmount: 179 },
+            { id: 13, dateRaw: '18/01/2569', totalTransaction: 63193, etcAutoAmount: 59551, etcInputEntryAmount: 431, etcAutoLprAmount: 2466, etcInputLprAmount: 622, inputPlazaAmount: 123 },
+            { id: 14, dateRaw: '19/01/2569', totalTransaction: 93657, etcAutoAmount: 89498, etcInputEntryAmount: 644, etcAutoLprAmount: 2649, etcInputLprAmount: 687, inputPlazaAmount: 179 },
+            { id: 15, dateRaw: '20/01/2569', totalTransaction: 61790, etcAutoAmount: 59053, etcInputEntryAmount: 465, etcAutoLprAmount: 1919, etcInputLprAmount: 279, inputPlazaAmount: 74 },
+        ].map(d => processRawRow(d, 'ETC'));
+
+        function processRawRow(d, type) {
+            const dateObj = parseThaiDate(d.dateRaw)?.getTime() || 0;
+            let autoMatch, inputMatch;
+            
+            if(type === 'ETC') {
+                autoMatch = (d.etcAutoAmount || 0) + (d.etcAutoLprAmount || 0);
+                inputMatch = (d.etcInputEntryAmount || 0) + (d.etcInputLprAmount || 0);
+            } else {
+                autoMatch = d.autoMatchAmount;
+                inputMatch = d.inputMatchAmount;
+            }
+
+            // Success Rate Formula: (Auto + Input) / Total
+            const numerator = autoMatch + inputMatch;
+            const matchingPct = d.totalTransaction > 0 ? parseFloat(((numerator / d.totalTransaction) * 100).toFixed(2)) : 0;
+            const kpi = type === 'LPR' ? KPI_LPR : KPI_ETC;
+
+            return {
+                ...d,
+                dateObj,
+                autoMatchAmount: autoMatch,
+                inputMatchAmount: inputMatch,
+                matchingPct,
+                passThreshold: matchingPct >= kpi
+            };
+        }
+
+        const CustomXAxisTick = ({ x, y, payload }) => {
+            const dateStr = payload.value;
+            const parts = dateStr.split(/[\/\-]/);
+            let isWeekEndDay = false;
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                let year = parseInt(parts[2], 10);
+                if (year > 2400) year -= 543;
+                const d = new Date(year, month, day);
+                const dayOfWeek = d.getDay();
+                isWeekEndDay = dayOfWeek === 0 || dayOfWeek === 6;
+            }
+            return (
+                <g transform={`translate(${x},${y})`}>
+                    <text x={0} y={0} dy={16} textAnchor="end" fill={isWeekEndDay ? "#ef4444" : "#64748b"} transform="rotate(-45)" fontSize={10} fontWeight={isWeekEndDay ? "bold" : "normal"}>{dateStr}</text>
+                </g>
+            );
+        };
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('LPR');
+            const [lprData, setLprData] = useState(INITIAL_LPR_DATA);
+            const [etcData, setEtcData] = useState(INITIAL_ETC_DATA);
+            const [startDate, setStartDate] = useState('');
+            const [endDate, setEndDate] = useState('');
+            const [fileName, setFileName] = useState('Verified Data (06-20 Jan)');
+            const [logs, setLogs] = useState([]);
+
+            const currentData = activeTab === 'LPR' ? lprData : etcData;
+            const currentKPI = activeTab === 'LPR' ? KPI_LPR : KPI_ETC;
+
+            const addLog = (msg) => {
+                const time = new Date().toLocaleTimeString();
+                setLogs(prev => [`[${time}] ${msg}`, ...prev]);
+            };
+
+            // Initial Date Set
+            useEffect(() => {
+                if(INITIAL_LPR_DATA.length > 0) {
+                     const d1 = new Date(INITIAL_LPR_DATA[0].dateObj).toISOString().split('T')[0];
+                     const d2 = new Date(INITIAL_LPR_DATA[INITIAL_LPR_DATA.length-1].dateObj).toISOString().split('T')[0];
+                     setStartDate(d1);
+                     setEndDate(d2);
+                }
+            }, []);
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                addLog(`--- เริ่มอ่านไฟล์: ${file.name} ---`);
+                setFileName(file.name);
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    processCSV(e.target.result);
+                };
+                reader.readAsText(file);
+            };
+
+            const processCSV = (csvText) => {
+                try {
+                    const lines = csvText.split(/\r?\n/);
+                    addLog(`พบ ${lines.length} บรรทัด`);
+                    const parsedData = [];
+                    
+                    const splitCSV = (line) => {
+                        const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                        return matches.map(m => m.replace(/^"|"$/g, '').trim());
+                    };
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let line = lines[i].trim();
+                        if (!line) continue;
+                        
+                        // Try simple comma split first
+                        let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.replace(/^"|"$/g, '').trim());
+                        if (cols.length < 2) cols = splitCSV(line);
+
+                        // Strict Data Row Detection: Must start with Date and have Number in Col 1
+                        if (!cols[0] || !cols[0].match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/)) continue;
+                        if (!cols[1] || !cols[1].match(/\d/)) continue;
+
+                        // Found a data row!
+                        let dateStr = cols[0];
+                        let totalTx = parseNumber(cols[1]);
+                        let autoTx, inputMatchTx, inputPlazaTx;
+                        let etcAutoVal=0, etcInputEntryVal=0, etcAutoLprVal=0, etcInputLprVal=0;
+
+                        if (activeTab === 'LPR') {
+                            // LPR Logic: Col 3=Auto, 5=Input, 7=Plaza
+                            if(cols.length < 8) continue; 
+                            autoTx = parseNumber(cols[3]); 
+                            inputMatchTx = parseNumber(cols[5]);
+                            inputPlazaTx = parseNumber(cols[7]);
+                        } else {
+                            // ETC Logic: Col 3=AutoETC, 5=Entry, 7=AutoLPR, 9=InputLPR, 11=Plaza
+                            if(cols.length < 12) continue;
+                            etcAutoVal = parseNumber(cols[3]);
+                            etcInputEntryVal = parseNumber(cols[5]);
+                            etcAutoLprVal = parseNumber(cols[7]);
+                            etcInputLprVal = parseNumber(cols[9]);
+                            inputPlazaTx = parseNumber(cols[11]);
+                            
+                            autoTx = etcAutoVal + etcAutoLprVal;
+                            inputMatchTx = etcInputEntryVal + etcInputLprVal;
+                        }
+
+                        const rawObj = {
+                            id: parsedData.length + 1,
+                            dateRaw: dateStr,
+                            totalTransaction: totalTx,
+                            autoMatchAmount: autoTx,
+                            inputMatchAmount: inputMatchTx,
+                            inputPlazaAmount: inputPlazaTx,
+                            etcAutoAmount: etcAutoVal,
+                            etcInputEntryAmount: etcInputEntryVal,
+                            etcAutoLprAmount: etcAutoLprVal,
+                            etcInputLprAmount: etcInputLprVal
+                        };
+
+                        const processed = processRawRow(rawObj, activeTab);
+                        if (processed.dateObj && !isNaN(processed.dateObj)) {
+                            parsedData.push(processed);
+                        }
+                    }
+
+                    if (parsedData.length > 0) {
+                        parsedData.sort((a, b) => a.dateObj - b.dateObj);
+                        if (activeTab === 'LPR') setLprData(parsedData);
+                        else setEtcData(parsedData);
+                        
+                        const d1 = new Date(parsedData[0].dateObj).toISOString().split('T')[0];
+                        const d2 = new Date(parsedData[parsedData.length-1].dateObj).toISOString().split('T')[0];
+                        setStartDate(d1);
+                        setEndDate(d2);
+                        
+                        addLog(`✅ สำเร็จ! ดึงข้อมูลได้ ${parsedData.length} รายการ`);
+                    } else {
+                        addLog("⚠️ ไม่พบข้อมูลที่ตรงเงื่อนไข");
+                        alert("ไม่พบข้อมูล! โปรดตรวจสอบว่าไฟล์มีคอลัมน์ วันที่ และ ยอดรวม ตรงตามแท็บที่เลือกหรือไม่");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    addLog("❌ Error Parsing");
+                    alert("เกิดข้อผิดพลาดในการอ่านไฟล์");
+                }
+            };
+
+            const filteredData = useMemo(() => {
+                return currentData.filter(item => {
+                    if (startDate && item.dateObj < new Date(startDate).setHours(0,0,0,0)) return false;
+                    if (endDate && item.dateObj > new Date(endDate).setHours(23,59,59,999)) return false;
+                    return true;
+                });
+            }, [currentData, startDate, endDate]);
+
+            const stats = useMemo(() => {
+                const totalTx = filteredData.reduce((sum, item) => sum + item.totalTransaction, 0);
+                const sumAuto = filteredData.reduce((sum, item) => sum + item.autoMatchAmount, 0);
+                const sumInput = filteredData.reduce((sum, item) => sum + item.inputMatchAmount, 0);
+                const sumPlaza = filteredData.reduce((sum, item) => sum + item.inputPlazaAmount, 0);
+                
+                const totalNumerator = sumAuto + sumInput;
+                const avgMatchingPct = totalTx > 0 ? (totalNumerator / totalTx) * 100 : 0;
+                
+                const passCount = filteredData.filter(item => item.passThreshold).length;
+                
+                return { totalTx, avgMatchingPct, passCount, sumInput, sumPlaza };
+            }, [filteredData]);
+
+            const resetData = () => {
+                setLprData(INITIAL_LPR_DATA);
+                setEtcData(INITIAL_ETC_DATA);
+                setFileName('Verified Data (06-20 Jan)');
+                if(INITIAL_LPR_DATA.length > 0) {
+                     const d1 = new Date(INITIAL_LPR_DATA[0].dateObj).toISOString().split('T')[0];
+                     const d2 = new Date(INITIAL_LPR_DATA[INITIAL_LPR_DATA.length-1].dateObj).toISOString().split('T')[0];
+                     setStartDate(d1);
+                     setEndDate(d2);
+                }
+            };
+
+            return (
+                <div className="p-4 md:p-6 max-w-7xl mx-auto">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <div className="flex items-center gap-2">
+                            <div className="bg-blue-100 p-2 rounded-lg text-blue-600"><Icons.Layout /></div>
+                            <div>
+                                <h1 className="text-xl font-bold text-slate-800">Performance Dashboard</h1>
+                                <p className="text-xs text-slate-500">ระบบรายงานประสิทธิภาพการ Matching (LPR / ETC)</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <label className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg cursor-pointer transition shadow-sm text-sm ${activeTab === 'LPR' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+                                <Icons.Upload /> 
+                                <span>อัปโหลด {activeTab} CSV</span>
+                                <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                            </label>
+                            <button onClick={resetData} className="px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+                                <Icons.Refresh />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex gap-4 mb-6 border-b border-slate-200">
+                        <button onClick={() => setActiveTab('LPR')} className={`pb-3 px-4 text-sm font-medium flex items-center gap-2 transition border-b-2 ${activeTab === 'LPR' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                            <Icons.Activity /> LPR Matching
+                        </button>
+                        <button onClick={() => setActiveTab('ETC')} className={`pb-3 px-4 text-sm font-medium flex items-center gap-2 transition border-b-2 ${activeTab === 'ETC' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+                            <Icons.Zap /> ETC Matching
+                        </button>
+                    </div>
+
+                    {/* Source Bar */}
+                    <div className="flex justify-between items-center mb-4 text-sm">
+                        <span className="text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm flex items-center gap-2">
+                            <Icons.File /> แหล่งข้อมูล: <b>{fileName}</b>
+                        </span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${activeTab === 'LPR' ? 'bg-blue-50 text-blue-700' : 'bg-indigo-50 text-indigo-700'}`}>
+                            <Icons.Target /> KPI Target: {currentKPI}%
+                        </span>
+                    </div>
+
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                        <div className="card p-4 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-3 opacity-10"><Icons.Trending /></div>
+                            <p className="text-xs text-slate-500 font-bold uppercase">Total Transactions</p>
+                            <p className="text-2xl font-bold text-slate-800 mt-1">{stats.totalTx.toLocaleString()}</p>
+                        </div>
+                        <div className={`card p-4 relative overflow-hidden border-b-4 ${stats.avgMatchingPct >= currentKPI ? 'border-b-green-500' : 'border-b-red-500'}`}>
+                            <div className="absolute top-0 right-0 p-3 opacity-10"><Icons.Activity /></div>
+                            <p className="text-xs text-slate-500 font-bold uppercase">Matching % (Auto+Input)</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`text-2xl font-bold ${stats.avgMatchingPct >= currentKPI ? 'text-green-600' : 'text-red-600'}`}>
+                                    {stats.avgMatchingPct.toFixed(2)}%
+                                </span>
+                            </div>
+                        </div>
+                        <div className="card p-4 relative overflow-hidden border-b-4 border-b-emerald-500">
+                            <div className="absolute top-0 right-0 p-3 opacity-10"><Icons.Check /></div>
+                            <p className="text-xs text-slate-500 font-bold uppercase">Passed KPI</p>
+                            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.passCount} <span className="text-sm font-normal text-slate-400">/ {filteredData.length} Days</span></p>
+                        </div>
+                        <div className="card p-4 relative overflow-hidden border-b-4 border-b-amber-500">
+                            <div className="absolute top-0 right-0 p-3 opacity-10"><Icons.Car /></div>
+                            <p className="text-xs text-slate-500 font-bold uppercase">Input Matching</p>
+                            <p className="text-2xl font-bold text-amber-600 mt-1">{stats.sumInput.toLocaleString()}</p>
+                            <p className="text-xs text-slate-400">คีย์แก้ไข</p>
+                        </div>
+                        <div className="card p-4 relative overflow-hidden border-b-4 border-b-orange-500">
+                            <div className="absolute top-0 right-0 p-3 opacity-10"><Icons.Shield /></div>
+                            <p className="text-xs text-slate-500 font-bold uppercase">Input Plaza</p>
+                            <p className="text-2xl font-bold text-orange-600 mt-1">{stats.sumPlaza.toLocaleString()}</p>
+                            <p className="text-xs text-slate-400">คีย์หน้าด่าน</p>
+                        </div>
+                    </div>
+
+                    {/* Chart */}
+                    <div className="card p-5 h-[400px] mb-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-slate-700">แนวโน้มประสิทธิภาพรายวัน ({activeTab})</h3>
+                            <div className="flex items-center gap-2 bg-slate-50 rounded px-2 py-1 text-xs">
+                                <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} className="bg-transparent outline-none"/>
+                                <span>-</span>
+                                <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} className="bg-transparent outline-none"/>
+                            </div>
+                        </div>
+                        <ResponsiveContainer width="100%" height="90%">
+                            <ComposedChart data={filteredData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                                <XAxis 
+                                    dataKey="dateRaw" 
+                                    fontSize={10} 
+                                    angle={-45} 
+                                    textAnchor="end" 
+                                    height={60} 
+                                    tick={<CustomXAxisTick />}
+                                    interval={0}
+                                />
+                                <YAxis yAxisId="left" orientation="left" fontSize={10} tickFormatter={(v)=>`${(v/1000).toFixed(0)}k`}/>
+                                <YAxis yAxisId="right" orientation="right" domain={[85, 100]} unit="%" fontSize={10}/>
+                                <Tooltip formatter={(value, name) => [name === 'matchingPct' ? `${parseFloat(value).toFixed(2)}%` : value.toLocaleString(), name === 'matchingPct' ? 'Matching %' : name]} />
+                                <Legend verticalAlign="top"/>
+                                <Bar yAxisId="left" dataKey="totalTransaction" name="Total" fill={activeTab === 'LPR' ? "#e2e8f0" : "#e0e7ff"} barSize={20} />
+                                <Line yAxisId="right" type="monotone" dataKey="matchingPct" name="Success %" stroke={activeTab === 'LPR' ? "#3b82f6" : "#4f46e5"} strokeWidth={3} dot={{r:4}} />
+                                <ReferenceLine yAxisId="right" y={currentKPI} stroke="red" strokeDasharray="3 3" label={{value: 'KPI', fontSize: 10, fill: 'red'}} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Table */}
+                    <div className="card overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-slate-600">
+                                <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b">
+                                    <tr>
+                                        <th className="px-2 py-3 border-r">Date</th>
+                                        <th className="px-2 py-3 text-right border-r">Total</th>
+                                        <th className={`px-2 py-3 text-right border-r ${activeTab === 'LPR' ? 'text-blue-600' : 'text-indigo-600'}`}>Auto Match</th>
+                                        
+                                        {activeTab === 'LPR' ? (
+                                            <>
+                                                <th className="px-2 py-3 text-right border-r">Input Match</th>
+                                                <th className="px-2 py-3 text-center border-r text-slate-400">Input %</th>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <th className="px-2 py-3 text-right border-r bg-amber-50 text-amber-700">Input Entry</th>
+                                                <th className="px-2 py-3 text-center border-r bg-amber-50 text-amber-600/70">%</th>
+                                                <th className="px-2 py-3 text-right border-r bg-blue-50 text-blue-700">Auto LPR</th>
+                                                <th className="px-2 py-3 text-center border-r bg-blue-50 text-blue-600/70">%</th>
+                                                <th className="px-2 py-3 text-right border-r bg-amber-50 text-amber-700">Input LPR</th>
+                                                <th className="px-2 py-3 text-center border-r bg-amber-50 text-amber-600/70">%</th>
+                                            </>
+                                        )}
+                                        
+                                        <th className="px-2 py-3 text-right border-r">Input Plaza</th>
+                                        <th className="px-2 py-3 text-center border-r text-slate-400">Plaza %</th>
+                                        <th className="px-2 py-3 text-center bg-gray-50 font-bold border-r">Success %</th>
+                                        <th className="px-2 py-3 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {filteredData.map((row) => (
+                                        <tr key={row.id} className="hover:bg-slate-50">
+                                            <td className="px-2 py-3 font-medium border-r whitespace-nowrap">{row.dateRaw}</td>
+                                            <td className="px-2 py-3 text-right font-mono border-r">{row.totalTransaction.toLocaleString()}</td>
+                                            
+                                            <td className={`px-2 py-3 text-right font-mono font-bold border-r ${activeTab === 'LPR' ? 'text-blue-600' : 'text-indigo-600'}`}>
+                                                {activeTab === 'ETC' ? (
+                                                    <div className="flex flex-col">
+                                                        <span>{row.etcAutoAmount?.toLocaleString()}</span>
+                                                        <span className="text-[10px] text-slate-400 font-normal">ETC Auto</span>
+                                                    </div>
+                                                ) : row.autoMatchAmount.toLocaleString()}
+                                            </td>
+
+                                            {activeTab === 'LPR' ? (
+                                                <>
+                                                    <td className="px-2 py-3 text-right font-mono border-r">{row.inputMatchAmount.toLocaleString()}</td>
+                                                    <td className="px-2 py-3 text-center font-mono text-xs text-slate-500 border-r">{renderPct(row.inputMatchAmount, row.totalTransaction)}</td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="px-2 py-3 text-right font-mono bg-amber-50/50 text-amber-700 border-r">{row.etcInputEntryAmount?.toLocaleString()}</td>
+                                                    <td className="px-2 py-3 text-center font-mono bg-amber-50/50 text-amber-600/70 text-xs border-r">{renderPct(row.etcInputEntryAmount, row.totalTransaction)}</td>
+                                                    <td className="px-2 py-3 text-right font-mono bg-blue-50/50 text-blue-700 border-r">{row.etcAutoLprAmount?.toLocaleString()}</td>
+                                                    <td className="px-2 py-3 text-center font-mono bg-blue-50/50 text-blue-600/70 text-xs border-r">{renderPct(row.etcAutoLprAmount, row.totalTransaction)}</td>
+                                                    <td className="px-2 py-3 text-right font-mono bg-amber-50/50 text-amber-700 border-r">{row.etcInputLprAmount?.toLocaleString()}</td>
+                                                    <td className="px-2 py-3 text-center font-mono bg-amber-50/50 text-amber-600/70 text-xs border-r">{renderPct(row.etcInputLprAmount, row.totalTransaction)}</td>
+                                                </>
+                                            )}
+
+                                            <td className="px-2 py-3 text-right font-mono border-r">{row.inputPlazaAmount.toLocaleString()}</td>
+                                            <td className="px-2 py-3 text-center font-mono text-xs text-slate-500 border-r">{renderPct(row.inputPlazaAmount, row.totalTransaction)}</td>
+                                            
+                                            <td className="px-2 py-3 text-center font-bold bg-gray-50 border-r">
+                                                <span className={`px-2 py-1 rounded text-xs ${row.passThreshold ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {row.matchingPct.toFixed(2)}%
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-3 text-center">
+                                                {row.passThreshold ? <Icons.Check /> : <Icons.Alert />}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div className="log-box">
+                       <strong>System Log:</strong>
+                       {logs.map((l, i) => <div key={i}>{l}</div>)}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
