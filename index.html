@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPR & ETC Matching Dashboard</title>
+    <title>LPR & ETC Matching Dashboard (GitHub Auto-Fetch)</title>
     
     <!-- Libraries via CDN (Pinned Versions for Stability) -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -42,6 +42,7 @@
         const IconFileText = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>;
         const IconFilter = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
         const IconInfo = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
+        const IconGithub = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>;
 
         // --- UTILITIES ---
         const parseThaiDate = (dateStr) => {
@@ -112,7 +113,6 @@
             
             if (parserError.length > 0) { 
                 console.error("XML Parsing Error:", parserError[0].textContent);
-                alert(`เกิดข้อผิดพลาดในการอ่านไฟล์ ${type}. กรุณาตรวจสอบรูปแบบไฟล์`);
                 return []; 
             }
 
@@ -172,7 +172,6 @@
                         const lprHPercent = parseNum(rowRaw['lprhpercent1']);
                         const lprL = parseNum(rowRaw['lprl1']);
                         const lprLPercent = parseNum(rowRaw['lprlpercent1']);
-                        
                         const passed = lprHPercent > 95;
 
                         const entryObj = {
@@ -188,37 +187,6 @@
                 }
             }
             return extractedData;
-        }
-
-        // --- SINGLE DAY INITIAL DATA ---
-        function getInitialData() {
-            const day1Date = "06/01/2569";
-            const day1JsDate = new Date(2026, 0, 6);
-            return [{
-                id: day1Date,
-                date: day1Date,
-                jsDate: day1JsDate,
-                etc: {
-                    total: 93728, auto: 89129, pAuto: 95.09,
-                    inputEntry: 713, pInputEntry: 0.76,
-                    autoLpr: 84, pAutoLpr: 0.09,
-                    inputLpr: 3569, pInputLpr: 3.81,
-                    inputPlaza: 233, pInputPlaza: 0.25,
-                    criteriaSum: 99.75, passed: true
-                },
-                lpr: {
-                    total: 127473, auto: 119257, pAuto: 93.55,
-                    inputMatch: 2412, pInputMatch: 1.89,
-                    inputPlaza: 5804, pInputPlaza: 4.55,
-                    criteriaSum: 95.44, passed: true
-                },
-                entryLpr: {
-                    total: 235541, lprH: 228303, lprHPercent: 96.93, lprL: 7238, lprLPercent: 3.07, passed: true
-                },
-                exitLpr: {
-                    total: 239478, lprH: 233956, lprHPercent: 97.69, lprL: 5522, lprLPercent: 2.31, passed: true
-                }
-            }];
         }
 
         // --- COMPONENTS ---
@@ -280,10 +248,61 @@
             const [exitLprRaw, setExitLprRaw] = useState(null);
             const [isUsingRealData, setIsUsingRealData] = useState(false);
             const [rechartsLoaded, setRechartsLoaded] = useState(false);
+            const [autoFetchStatus, setAutoFetchStatus] = useState('idle'); // idle, loading, success, error
 
             useEffect(() => {
                 if (window.Recharts) setRechartsLoaded(true);
-                setData(getInitialData());
+                
+                // AUTO-FETCH LOGIC FROM GITHUB
+                const tryAutoFetch = async () => {
+                    setAutoFetchStatus('loading');
+                    try {
+                        const baseUrl = "https://raw.githubusercontent.com/satsawat00-code/satsawat_Dashboard/def3fe42a0e01375984e204f67046b5710e22706/Data/";
+                        
+                        const fileConfigs = [
+                            { url: baseUrl + "LPR%20Matching.xml", type: 'LPR' },
+                            { url: baseUrl + "ETC%20Matching.xml", type: 'ETC' },
+                            { url: baseUrl + "Entry_LPR.xml", type: 'EntryLPR' },
+                            { url: baseUrl + "Exit_LPR.xml", type: 'ExitLPR' }
+                        ];
+
+                        const results = await Promise.allSettled(
+                            fileConfigs.map(async (config) => {
+                                const response = await fetch(config.url);
+                                if (!response.ok) throw new Error(`HTTP error ${response.status} for ${config.url}`);
+                                const text = await response.text();
+                                return { type: config.type, data: parseXMLData(text, config.type) };
+                            })
+                        );
+
+                        let loadedAny = false;
+                        results.forEach(res => {
+                            if (res.status === 'fulfilled') {
+                                const { type, data } = res.value;
+                                if (data && data.length > 0) {
+                                    loadedAny = true;
+                                    if (type === 'LPR') setLprRaw(data);
+                                    if (type === 'ETC') setEtcRaw(data);
+                                    if (type === 'EntryLPR') setEntryLprRaw(data);
+                                    if (type === 'ExitLPR') setExitLprRaw(data);
+                                }
+                            }
+                        });
+
+                        if (loadedAny) {
+                            setAutoFetchStatus('success');
+                            setIsUsingRealData(true); // Automatically switch to real data mode
+                        } else {
+                            setAutoFetchStatus('error');
+                        }
+
+                    } catch (err) {
+                        console.error("Auto fetch failed:", err);
+                        setAutoFetchStatus('error');
+                    }
+                };
+                
+                tryAutoFetch();
             }, []);
 
             const { 
@@ -319,6 +338,7 @@
                             setExitLprRaw(parsed);
                             alert(`อัปโหลด Exit LPR สำเร็จ: พบ ${parsed.length} รายการ`);
                         }
+                        setIsUsingRealData(true);
                     } catch (err) {
                         console.error(err);
                         alert("เกิดข้อผิดพลาดในการอ่านไฟล์: " + err.message);
@@ -350,7 +370,7 @@
 
                     mergeData(etcRaw, 'etc');
                     mergeData(lprRaw, 'lpr');
-                    mergeData(entryLprRaw, 'entryLpr'); // Note the key name 'entryLpr'
+                    mergeData(entryLprRaw, 'entryLpr');
                     mergeData(exitLprRaw, 'exitLpr');
 
                     const mergedArray = Array.from(mergedMap.values())
@@ -367,7 +387,6 @@
 
                     if (mergedArray.length > 0) {
                         setData(mergedArray);
-                        setIsUsingRealData(true);
                     }
                 }
             }, [etcRaw, lprRaw, entryLprRaw, exitLprRaw]);
@@ -448,29 +467,32 @@
                     <div className="bg-slate-800 text-white px-6 py-3 text-sm shadow-md">
                         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                                <span className={`w-3 h-3 rounded-full shadow-lg ${isUsingRealData ? 'bg-green-400' : 'bg-yellow-400 animate-pulse'}`}></span>
-                                <span className="font-medium tracking-wide">{isUsingRealData ? 'โหมดข้อมูลจริง (Real Data Active)' : 'โหมดข้อมูลตัวอย่าง (Sample Data - 06/01/2569)'}</span>
+                                <span className={`w-3 h-3 rounded-full shadow-lg ${isUsingRealData ? 'bg-green-400' : (autoFetchStatus === 'loading' ? 'bg-blue-400 animate-bounce' : 'bg-yellow-400 animate-pulse')}`}></span>
+                                <span className="font-medium tracking-wide">
+                                    {autoFetchStatus === 'loading' ? 'กำลังค้นหาไฟล์ข้อมูลจาก GitHub...' :
+                                     isUsingRealData ? 'โหมดข้อมูลจริง (Real Data Active)' : 'โหมดรอข้อมูล'}
+                                </span>
                             </div>
                             <div className="flex items-center gap-4 flex-wrap">
                                 {/* Swapped Order: LPR First, then ETC */}
                                 <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-purple-400 hover:text-purple-300">
-                                    <IconUpload className="w-4 h-4 text-purple-300" />
-                                    <span className="font-medium">Up. LPR</span>
+                                    <IconGithub className="w-4 h-4 text-purple-300" />
+                                    <span className="font-medium">Override LPR</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'LPR')} className="hidden" />
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-blue-400 hover:text-blue-300">
-                                    <IconUpload className="w-4 h-4 text-blue-300" />
-                                    <span className="font-medium">Up. ETC</span>
+                                    <IconGithub className="w-4 h-4 text-blue-300" />
+                                    <span className="font-medium">Override ETC</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ETC')} className="hidden" />
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-emerald-400 hover:text-emerald-300">
-                                    <IconUpload className="w-4 h-4 text-emerald-300" />
-                                    <span className="font-medium">Up. Entry</span>
+                                    <IconGithub className="w-4 h-4 text-emerald-300" />
+                                    <span className="font-medium">Override Entry</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'EntryLPR')} className="hidden" />
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-pink-400 hover:text-pink-300">
-                                    <IconUpload className="w-4 h-4 text-pink-300" />
-                                    <span className="font-medium">Up. Exit</span>
+                                    <IconGithub className="w-4 h-4 text-pink-300" />
+                                    <span className="font-medium">Override Exit</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ExitLPR')} className="hidden" />
                                 </label>
                             </div>
@@ -514,12 +536,22 @@
                     {/* Main Content */}
                     <main className="max-w-7xl mx-auto px-6 py-8">
                         
-                        {!isUsingRealData && (
-                            <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3 text-blue-800">
+                        {autoFetchStatus === 'error' && (
+                            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-800">
                                 <IconInfo className="w-5 h-5 mt-0.5 shrink-0" />
                                 <div>
-                                    <p className="font-semibold">กำลังแสดงข้อมูลตัวอย่าง (Sample Data)</p>
-                                    <p className="text-sm mt-1 opacity-90">ขณะนี้ระบบแสดงผลเฉพาะข้อมูลวันที่ 06/01/2569 ที่ยืนยันความถูกต้องแล้ว <br/>กรุณากดปุ่ม Upload ด้านบนเพื่อนำเข้าข้อมูลจริงทั้งหมดเข้าสู่ระบบ</p>
+                                    <p className="font-semibold">ไม่สามารถดึงข้อมูลอัตโนมัติจาก GitHub ได้</p>
+                                    <p className="text-sm mt-1 opacity-90">ระบบไม่สามารถเข้าถึงไฟล์ข้อมูลจาก GitHub Repository ได้โดยตรง อาจเป็นเพราะปัญหา CORS หรือ Path ไม่ถูกต้อง กรุณาใช้ปุ่ม <strong>Override</strong> ด้านบนเพื่ออัปโหลดไฟล์ด้วยตัวเอง</p>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {autoFetchStatus === 'success' && (
+                            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3 text-green-800">
+                                <IconCheck className="w-5 h-5 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="font-semibold">ดึงข้อมูลสำเร็จ</p>
+                                    <p className="text-sm mt-1 opacity-90">ข้อมูลล่าสุดถูกโหลดมาจาก GitHub เรียบร้อยแล้ว</p>
                                 </div>
                             </div>
                         )}
@@ -576,7 +608,7 @@
                                             </div>
                                         </div>
 
-                                        {/* Entry & Exit Overview Section Below Graph */}
+                                        {/* Moved Entry & Exit Overview Section Below Graph */}
                                         <div className="space-y-4 pt-6 border-t border-slate-200">
                                             <div className="flex items-center gap-3"><div className="h-8 w-1 bg-teal-600 rounded-full"></div><h3 className="text-lg font-bold text-teal-700">Entry & Exit LPR Overview</h3></div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -733,6 +765,7 @@
                                                         <tbody className="divide-y divide-slate-100">
                                                             {filteredData.map((row) => {
                                                                 const item = row[`${type}Lpr`];
+                                                                // Safety check for undefined item to prevent ReferenceError
                                                                 if (!item) return null; 
 
                                                                 return (
