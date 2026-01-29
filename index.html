@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPR & ETC Matching Dashboard (Auto-Update Fix)</title>
+    <title>LPR & ETC Matching Dashboard (Always Updated)</title>
     
     <!-- Libraries via CDN (Pinned Versions for Stability) -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -172,6 +172,7 @@
                         const lprHPercent = parseNum(rowRaw['lprhpercent1']);
                         const lprL = parseNum(rowRaw['lprl1']);
                         const lprLPercent = parseNum(rowRaw['lprlpercent1']);
+                        
                         const passed = lprHPercent > 95;
 
                         const entryObj = {
@@ -283,12 +284,14 @@
 
             useEffect(() => {
                 if (window.Recharts) setRechartsLoaded(true);
-                
-                // AUTO-FETCH LOGIC FROM GITHUB WITH CACHE BUSTING
+                setData(getInitialData());
+
+                // AUTO-FETCH LOGIC FROM GITHUB WITH CACHE BUSTING (FIXED TO 'main' BRANCH)
+                // This ensures we always get the LATEST files uploaded to the main branch
                 const tryAutoFetch = async () => {
                     setAutoFetchStatus('loading');
                     try {
-                        const baseUrl = "https://raw.githubusercontent.com/satsawat00-code/satsawat_Dashboard/def3fe42a0e01375984e204f67046b5710e22706/Data/";
+                        const baseUrl = "https://raw.githubusercontent.com/satsawat00-code/satsawat_Dashboard/main/Data/";
                         const timestamp = new Date().getTime(); // Cache busting timestamp
                         
                         const fileConfigs = [
@@ -796,6 +799,7 @@
                                                         <tbody className="divide-y divide-slate-100">
                                                             {filteredData.map((row) => {
                                                                 const item = row[`${type}Lpr`];
+                                                                // Safety check for undefined item to prevent ReferenceError
                                                                 if (!item) return null; 
 
                                                                 return (
