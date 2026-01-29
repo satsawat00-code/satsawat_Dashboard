@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPR & ETC Matching Dashboard (GitHub Auto-Fetch)</title>
+    <title>LPR & ETC Matching Dashboard (Auto-Update Fix)</title>
     
     <!-- Libraries via CDN (Pinned Versions for Stability) -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -189,6 +189,37 @@
             return extractedData;
         }
 
+        // --- SINGLE DAY INITIAL DATA ---
+        function getInitialData() {
+            const day1Date = "06/01/2569";
+            const day1JsDate = new Date(2026, 0, 6);
+            return [{
+                id: day1Date,
+                date: day1Date,
+                jsDate: day1JsDate,
+                etc: {
+                    total: 93728, auto: 89129, pAuto: 95.09,
+                    inputEntry: 713, pInputEntry: 0.76,
+                    autoLpr: 84, pAutoLpr: 0.09,
+                    inputLpr: 3569, pInputLpr: 3.81,
+                    inputPlaza: 233, pInputPlaza: 0.25,
+                    criteriaSum: 99.75, passed: true
+                },
+                lpr: {
+                    total: 127473, auto: 119257, pAuto: 93.55,
+                    inputMatch: 2412, pInputMatch: 1.89,
+                    inputPlaza: 5804, pInputPlaza: 4.55,
+                    criteriaSum: 95.44, passed: true
+                },
+                entryLpr: {
+                    total: 235541, lprH: 228303, lprHPercent: 96.93, lprL: 7238, lprLPercent: 3.07, passed: true
+                },
+                exitLpr: {
+                    total: 239478, lprH: 233956, lprHPercent: 97.69, lprL: 5522, lprLPercent: 2.31, passed: true
+                }
+            }];
+        }
+
         // --- COMPONENTS ---
         function StatCard({ title, value, subValue, icon: Icon, colorClass, bgClass }) {
             return (
@@ -253,17 +284,18 @@
             useEffect(() => {
                 if (window.Recharts) setRechartsLoaded(true);
                 
-                // AUTO-FETCH LOGIC FROM GITHUB
+                // AUTO-FETCH LOGIC FROM GITHUB WITH CACHE BUSTING
                 const tryAutoFetch = async () => {
                     setAutoFetchStatus('loading');
                     try {
                         const baseUrl = "https://raw.githubusercontent.com/satsawat00-code/satsawat_Dashboard/def3fe42a0e01375984e204f67046b5710e22706/Data/";
+                        const timestamp = new Date().getTime(); // Cache busting timestamp
                         
                         const fileConfigs = [
-                            { url: baseUrl + "LPR%20Matching.xml", type: 'LPR' },
-                            { url: baseUrl + "ETC%20Matching.xml", type: 'ETC' },
-                            { url: baseUrl + "Entry_LPR.xml", type: 'EntryLPR' },
-                            { url: baseUrl + "Exit_LPR.xml", type: 'ExitLPR' }
+                            { url: baseUrl + "LPR%20Matching.xml?t=" + timestamp, type: 'LPR' },
+                            { url: baseUrl + "ETC%20Matching.xml?t=" + timestamp, type: 'ETC' },
+                            { url: baseUrl + "Entry_LPR.xml?t=" + timestamp, type: 'EntryLPR' },
+                            { url: baseUrl + "Exit_LPR.xml?t=" + timestamp, type: 'ExitLPR' }
                         ];
 
                         const results = await Promise.allSettled(
@@ -291,7 +323,7 @@
 
                         if (loadedAny) {
                             setAutoFetchStatus('success');
-                            setIsUsingRealData(true); // Automatically switch to real data mode
+                            setIsUsingRealData(true); 
                         } else {
                             setAutoFetchStatus('error');
                         }
@@ -338,7 +370,6 @@
                             setExitLprRaw(parsed);
                             alert(`อัปโหลด Exit LPR สำเร็จ: พบ ${parsed.length} รายการ`);
                         }
-                        setIsUsingRealData(true);
                     } catch (err) {
                         console.error(err);
                         alert("เกิดข้อผิดพลาดในการอ่านไฟล์: " + err.message);
@@ -765,7 +796,6 @@
                                                         <tbody className="divide-y divide-slate-100">
                                                             {filteredData.map((row) => {
                                                                 const item = row[`${type}Lpr`];
-                                                                // Safety check for undefined item to prevent ReferenceError
                                                                 if (!item) return null; 
 
                                                                 return (
