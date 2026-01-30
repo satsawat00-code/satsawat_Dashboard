@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPR & ETC Matching Dashboard (Always Updated)</title>
+    <title>LPR & ETC Matching Dashboard</title>
     
     <!-- Libraries via CDN (Pinned Versions for Stability) -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -23,7 +23,7 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         /* Tighter table for ETC */
-        .table-compact th, .table-compact td { padding-left: 0.5rem; padding-right: 0.5rem; }
+        .table-compact th, .table-compact td { padding-left: 0.25rem; padding-right: 0.25rem; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
@@ -287,7 +287,6 @@
                 setData(getInitialData());
 
                 // AUTO-FETCH LOGIC FROM GITHUB WITH CACHE BUSTING (FIXED TO 'main' BRANCH)
-                // This ensures we always get the LATEST files uploaded to the main branch
                 const tryAutoFetch = async () => {
                     setAutoFetchStatus('loading');
                     try {
@@ -626,7 +625,6 @@
                                             <div className="flex items-center gap-3"><div className="h-8 w-1 bg-orange-600 rounded-full"></div><h3 className="text-lg font-bold text-orange-700">ETC Matching Overview</h3></div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <StatCard title="Total ETC Transaction" value={stats.totalEtc.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-orange-600" bgClass="bg-white border-orange-100" />
-                                                {/* Corrected: Avg ETC KPI Score in Orange */}
                                                 <StatCard title="Avg ETC KPI Score" value={`${stats.avgEtcCriteria}%`} subValue="Target > 98%" icon={IconCheckCircle} colorClass="text-orange-600" bgClass="bg-white border-orange-100" />
                                             </div>
                                         </div>
@@ -668,8 +666,26 @@
                                         </div>
                                         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                                             <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2"><IconFileText className="w-5 h-5 text-purple-600" /><h3 className="font-bold text-slate-800">ตารางข้อมูล LPR Matching</h3></div>
-                                            <div className="overflow-x-auto custom-scrollbar"><table className="w-full text-xs md:text-sm text-left whitespace-nowrap"><thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]"><tr><th className="px-5 py-4">วันที่</th><th className="px-5 py-4 text-right">Total</th><th className="px-5 py-4 bg-purple-50/50 text-purple-900 text-right">Auto Match</th><th className="px-5 py-4 bg-purple-50/50 text-purple-900 text-right">% Auto</th><th className="px-5 py-4 bg-teal-50/50 text-teal-900 text-right">%Input</th><th className="px-5 py-4 bg-teal-50/50 text-teal-900 text-right">Input%</th><th className="px-5 py-4 bg-amber-50/50 text-amber-900 text-right">Input Plaza</th><th className="px-5 py-4 bg-amber-50/50 text-amber-900 text-right">%Plaza</th><th className="px-5 py-4 text-center">KPI Score (%)</th><th className="px-5 py-4 text-center">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{filteredData.map((row) => (<tr key={row.id} className="hover:bg-slate-50"><td className="px-5 py-3.5 font-medium text-slate-700">{row.date}</td><td className="px-5 py-3.5 text-right font-mono text-slate-600">{row.lpr.total.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-right font-mono text-purple-700">{row.lpr.auto.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-right text-purple-700 font-semibold">{row.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-3.5 bg-teal-50/30 text-right font-mono text-teal-700">{row.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-3.5 bg-teal-50/30 text-right text-teal-700">{row.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-3.5 bg-amber-50/30 text-right font-mono text-amber-700">{row.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-3.5 bg-amber-50/30 text-right text-amber-700">{row.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-3.5 text-center"><span className={`px-2.5 py-0.5 rounded-full font-bold ${row.lpr.criteriaSum > 90.25 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}`}>{row.lpr.criteriaSum.toFixed(2)}%</span></td><td className="px-5 py-3.5 text-center"><StatusBadge passed={row.lpr.passed} /></td></tr>))}
-                                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-300"><td className="px-5 py-4 text-slate-800">รวม / เฉลี่ย</td><td className="px-5 py-4 text-right font-mono">{stats.lpr.total.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-right font-mono text-purple-900">{stats.lpr.auto.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-right text-purple-900">{stats.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-4 bg-teal-200/50 text-right font-mono text-teal-900">{stats.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-4 bg-teal-200/50 text-right text-teal-900">{stats.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-4 bg-amber-200/50 text-right font-mono text-amber-900">{stats.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-4 bg-amber-200/50 text-right text-amber-900">{stats.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-4 text-center text-slate-800">{stats.avgLprCriteria}%</td><td className="px-5 py-4 text-center text-xs text-slate-400">AVG</td></tr>
+                                            <div className="overflow-x-auto custom-scrollbar"><table className="w-full text-xs md:text-sm text-left whitespace-nowrap"><thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                                                <tr>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100 text-base">วันที่</th>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100 text-base">Total</th>
+                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-purple-100 text-purple-900">Auto Matching</th>
+                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-teal-100 text-teal-900">Input LPR</th>
+                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-amber-100 text-amber-900">Input Plaza</th>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100">KPI Score (%)</th>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-slate-200 text-center bg-slate-100">Status</th>
+                                                </tr>
+                                                <tr>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-purple-50/50 text-purple-900">Total</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-purple-50/50 text-purple-900">%</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-teal-50/50 text-teal-900">Total</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-teal-50/50 text-teal-900">%</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-amber-50/50 text-amber-900">Total</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-amber-50/50 text-amber-900">%</th>
+                                                </tr>
+                                            </thead><tbody className="divide-y divide-slate-100">{filteredData.map((row) => (<tr key={row.id} className="hover:bg-slate-50"><td className="px-5 py-3.5 font-medium text-slate-700 text-center">{row.date}</td><td className="px-5 py-3.5 text-center font-mono text-slate-600">{row.lpr.total.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-center font-mono text-purple-700">{row.lpr.auto.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-center text-purple-700 font-semibold">{row.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-3.5 bg-teal-50/30 text-center font-mono text-teal-700">{row.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-3.5 bg-teal-50/30 text-center text-teal-700">{row.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-3.5 bg-amber-50/30 text-center font-mono text-amber-700">{row.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-3.5 bg-amber-50/30 text-center text-amber-700">{row.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-3.5 text-center"><span className={`px-2.5 py-0.5 rounded-full font-bold ${row.lpr.criteriaSum > 90.25 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}`}>{row.lpr.criteriaSum.toFixed(2)}%</span></td><td className="px-5 py-3.5 text-center"><StatusBadge passed={row.lpr.passed} /></td></tr>))}
+                                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-300"><td className="px-5 py-4 text-slate-800 text-center">รวม / เฉลี่ย</td><td className="px-5 py-4 text-center font-mono">{stats.lpr.total.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-center font-mono text-purple-900">{stats.lpr.auto.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-center text-purple-900">{stats.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-4 bg-teal-200/50 text-center font-mono text-teal-900">{stats.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-4 bg-teal-200/50 text-center text-teal-900">{stats.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-4 bg-amber-200/50 text-center font-mono text-amber-900">{stats.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-4 bg-amber-200/50 text-center text-amber-900">{stats.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-4 text-center text-slate-800">{stats.avgLprCriteria}%</td><td className="px-5 py-4 text-center text-xs text-slate-400">AVG</td></tr>
                                             </tbody></table></div>
                                         </div>
                                     </div>
@@ -688,37 +704,44 @@
                                                 <table className="w-full text-[10px] md:text-xs text-left whitespace-nowrap table-compact">
                                                     <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider">
                                                         <tr>
-                                                            <th className="py-3">วันที่</th>
-                                                            <th className="py-3 text-right">Total</th>
-                                                            <th className="py-3 bg-blue-50/50 text-blue-900 text-right">Auto</th>
-                                                            <th className="py-3 bg-blue-50/50 text-blue-900 text-right">%Auto</th>
-                                                            <th className="py-3 bg-emerald-50/50 text-emerald-900 text-right">In.Ent</th>
-                                                            <th className="py-3 bg-emerald-50/50 text-emerald-900 text-right">%In</th>
-                                                            <th className="py-3 bg-orange-50/50 text-orange-900 text-right">A.LPR</th>
-                                                            <th className="py-3 bg-orange-50/50 text-orange-900 text-right">%A.LPR</th>
-                                                            <th className="py-3 bg-indigo-50/50 text-indigo-900 text-right">In.LPR</th>
-                                                            <th className="py-3 bg-indigo-50/50 text-indigo-900 text-right">%In.LPR</th>
-                                                            <th className="py-3 bg-gray-50 text-gray-700 text-right">In.Plz</th>
-                                                            <th className="py-3 bg-gray-50 text-gray-700 text-right">%Plz</th>
-                                                            <th className="py-3 text-center">KPI(%)</th>
-                                                            <th className="py-3 text-center">Status</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100 text-base">วันที่</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100 text-base">Total</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-100 text-blue-900">Auto</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-100 text-emerald-900">Handheld</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-100 text-orange-900">Auto Matching LPR</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-100 text-indigo-900">Input LPR</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-100 text-gray-900">Input Plaza</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100">KPI(%)</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-slate-200 text-center bg-slate-100">Status</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-50/50 text-blue-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-50/50 text-blue-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-50/50 text-orange-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-50/50 text-orange-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-50/50 text-gray-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-50/50 text-gray-900">%</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100">
                                                         {filteredData.map((row) => (
                                                             <tr key={row.id} className="hover:bg-slate-50">
-                                                                <td className="py-2 font-medium text-slate-700">{row.date}</td>
-                                                                <td className="py-2 text-right font-mono text-slate-600">{row.etc.total.toLocaleString()}</td>
-                                                                <td className="py-2 bg-blue-50/30 text-right font-mono text-blue-700">{row.etc.auto.toLocaleString()}</td>
-                                                                <td className="py-2 bg-blue-50/30 text-right text-blue-700 font-semibold">{row.etc.pAuto.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-emerald-50/30 text-right font-mono text-emerald-700">{row.etc.inputEntry.toLocaleString()}</td>
-                                                                <td className="py-2 bg-emerald-50/30 text-right text-emerald-700">{row.etc.pInputEntry.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-orange-50/30 text-right font-mono text-orange-700">{row.etc.autoLpr.toLocaleString()}</td>
-                                                                <td className="py-2 bg-orange-50/30 text-right text-orange-700">{row.etc.pAutoLpr.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-indigo-50/30 text-right font-mono text-indigo-700">{row.etc.inputLpr.toLocaleString()}</td>
-                                                                <td className="py-2 bg-indigo-50/30 text-right text-indigo-700">{row.etc.pInputLpr.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-gray-50/50 text-right font-mono text-gray-600">{row.etc.inputPlaza.toLocaleString()}</td>
-                                                                <td className="py-2 bg-gray-50/50 text-right text-gray-600">{row.etc.pInputPlaza.toFixed(2)}%</td>
+                                                                <td className="py-2 font-medium text-slate-700 text-center">{row.date}</td>
+                                                                <td className="py-2 text-center font-mono text-slate-600">{row.etc.total.toLocaleString()}</td>
+                                                                <td className="py-2 bg-blue-50/30 text-center font-mono text-blue-700">{row.etc.auto.toLocaleString()}</td>
+                                                                <td className="py-2 bg-blue-50/30 text-center text-blue-700 font-semibold">{row.etc.pAuto.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-emerald-50/30 text-center font-mono text-emerald-700">{row.etc.inputEntry.toLocaleString()}</td>
+                                                                <td className="py-2 bg-emerald-50/30 text-center text-emerald-700">{row.etc.pInputEntry.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-orange-50/30 text-center font-mono text-orange-700">{row.etc.autoLpr.toLocaleString()}</td>
+                                                                <td className="py-2 bg-orange-50/30 text-center text-orange-700">{row.etc.pAutoLpr.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-indigo-50/30 text-center font-mono text-indigo-700">{row.etc.inputLpr.toLocaleString()}</td>
+                                                                <td className="py-2 bg-indigo-50/30 text-center text-indigo-700">{row.etc.pInputLpr.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-gray-50/50 text-center font-mono text-gray-600">{row.etc.inputPlaza.toLocaleString()}</td>
+                                                                <td className="py-2 bg-gray-50/50 text-center text-gray-600">{row.etc.pInputPlaza.toFixed(2)}%</td>
                                                                 <td className="py-2 text-center">
                                                                     <span className={`px-1.5 py-0.5 rounded font-bold ${row.etc.criteriaSum > 98 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
                                                                         {row.etc.criteriaSum.toFixed(2)}%
@@ -728,18 +751,18 @@
                                                             </tr>
                                                         ))}
                                                         <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
-                                                            <td className="py-2 text-slate-800">Total</td>
-                                                            <td className="py-2 text-right font-mono">{stats.etc.total.toLocaleString()}</td>
-                                                            <td className="py-2 bg-blue-200/50 text-right font-mono text-blue-900">{stats.etc.auto.toLocaleString()}</td>
-                                                            <td className="py-2 bg-blue-200/50 text-right text-blue-900">{stats.etc.pAuto.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-emerald-200/50 text-right font-mono text-emerald-900">{stats.etc.inputEntry.toLocaleString()}</td>
-                                                            <td className="py-2 bg-emerald-200/50 text-right text-emerald-900">{stats.etc.pInputEntry.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-orange-200/50 text-right font-mono text-orange-900">{stats.etc.autoLpr.toLocaleString()}</td>
-                                                            <td className="py-2 bg-orange-200/50 text-right text-orange-900">{stats.etc.pAutoLpr.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-indigo-200/50 text-right font-mono text-indigo-900">{stats.etc.inputLpr.toLocaleString()}</td>
-                                                            <td className="py-2 bg-indigo-200/50 text-right text-indigo-900">{stats.etc.pInputLpr.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-gray-200/50 text-right font-mono text-gray-800">{stats.etc.inputPlaza.toLocaleString()}</td>
-                                                            <td className="py-2 bg-gray-200/50 text-right text-gray-800">{stats.etc.pInputPlaza.toFixed(2)}%</td>
+                                                            <td className="py-2 text-slate-800 text-center">Total</td>
+                                                            <td className="py-2 text-center font-mono">{stats.etc.total.toLocaleString()}</td>
+                                                            <td className="py-2 bg-blue-200/50 text-center font-mono text-blue-900">{stats.etc.auto.toLocaleString()}</td>
+                                                            <td className="py-2 bg-blue-200/50 text-center text-blue-900">{stats.etc.pAuto.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-emerald-200/50 text-center font-mono text-emerald-900">{stats.etc.inputEntry.toLocaleString()}</td>
+                                                            <td className="py-2 bg-emerald-200/50 text-center text-emerald-900">{stats.etc.pInputEntry.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-orange-200/50 text-center font-mono text-orange-900">{stats.etc.autoLpr.toLocaleString()}</td>
+                                                            <td className="py-2 bg-orange-200/50 text-center text-orange-900">{stats.etc.pAutoLpr.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-indigo-200/50 text-center font-mono text-indigo-900">{stats.etc.inputLpr.toLocaleString()}</td>
+                                                            <td className="py-2 bg-indigo-200/50 text-center text-indigo-900">{stats.etc.pInputLpr.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-gray-200/50 text-center font-mono text-gray-800">{stats.etc.inputPlaza.toLocaleString()}</td>
+                                                            <td className="py-2 bg-gray-200/50 text-center text-gray-800">{stats.etc.pInputPlaza.toFixed(2)}%</td>
                                                             <td className="py-2 text-center text-slate-800">{stats.avgEtcCriteria}%</td>
                                                             <td className="py-2 text-center text-xs text-slate-400">AVG</td>
                                                         </tr>
