@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPR & ETC Matching Dashboard (Mobile Responsive)</title>
+    <title>LPR & ETC Matching Dashboard</title>
     
     <!-- Libraries via CDN (Pinned Versions for Stability) -->
     <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
@@ -173,6 +173,7 @@
                         const lprHPercent = parseNum(rowRaw['lprhpercent1']);
                         const lprL = parseNum(rowRaw['lprl1']);
                         const lprLPercent = parseNum(rowRaw['lprlpercent1']);
+                        
                         const passed = lprHPercent > 95;
 
                         const entryObj = {
@@ -190,35 +191,82 @@
             return extractedData;
         }
 
-        // --- SINGLE DAY INITIAL DATA ---
+        // --- SINGLE DAY INITIAL DATA WITH MOCK FOR OTHER DAYS ---
         function getInitialData() {
-            const day1Date = "06/01/2569";
-            const day1JsDate = new Date(2026, 0, 6);
-            return [{
-                id: day1Date,
-                date: day1Date,
-                jsDate: day1JsDate,
-                etc: {
-                    total: 93728, auto: 89129, pAuto: 95.09,
-                    inputEntry: 713, pInputEntry: 0.76,
-                    autoLpr: 84, pAutoLpr: 0.09,
-                    inputLpr: 3569, pInputLpr: 3.81,
-                    inputPlaza: 233, pInputPlaza: 0.25,
-                    criteriaSum: 99.75, passed: true
-                },
-                lpr: {
-                    total: 127473, auto: 119257, pAuto: 93.55,
-                    inputMatch: 2412, pInputMatch: 1.89,
-                    inputPlaza: 5804, pInputPlaza: 4.55,
-                    criteriaSum: 95.44, passed: true
-                },
-                entryLpr: {
-                    total: 235541, lprH: 228303, lprHPercent: 96.93, lprL: 7238, lprLPercent: 3.07, passed: true
-                },
-                exitLpr: {
-                    total: 239478, lprH: 233956, lprHPercent: 97.69, lprL: 5522, lprLPercent: 2.31, passed: true
-                }
-            }];
+            const data = [];
+            const startDate = new Date(2026, 0, 6); // 6 Jan 2026
+            const endDate = new Date(2026, 0, 20);  // 20 Jan 2026
+
+            // Base Data Day 1 (Confirmed)
+            const day1LPR = {
+                total: 127473, auto: 119257, pAuto: 93.55, inputMatch: 2412, pInputMatch: 1.89, inputPlaza: 5804, pInputPlaza: 4.55
+            };
+            const day1ETC = {
+                total: 93728, auto: 89129, pAuto: 95.09, inputEntry: 713, pInputEntry: 0.76, autoLpr: 84, pAutoLpr: 0.09,
+                inputLpr: 3569, pInputLpr: 3.81, inputPlaza: 233, pInputPlaza: 0.25
+            };
+            const day1Entry = {
+                total: 235541, lprH: 228303, lprHPercent: 96.93, lprL: 7238, lprLPercent: 3.07
+            };
+            const day1Exit = {
+                total: 239478, lprH: 233956, lprHPercent: 97.69, lprL: 5522, lprLPercent: 2.31
+            };
+
+            let currentDate = new Date(startDate);
+            while (currentDate <= endDate) {
+                const dayStr = String(currentDate.getDate()).padStart(2, '0');
+                const monthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
+                const yearBE = currentDate.getFullYear() + 543;
+                const dateStr = `${dayStr}/${monthStr}/${yearBE}`;
+                
+                const isDay1 = currentDate.getDate() === 6 && currentDate.getMonth() === 0;
+                // Use Day 1 data exactly, randomize slightly for others
+                const variance = isDay1 ? 0 : (Math.random() - 0.5) * 0.05; 
+
+                // Generate consistent mock data
+                const lprTotal = Math.round(day1LPR.total * (1 + variance));
+                const etcTotal = Math.round(day1ETC.total * (1 + variance));
+                const entryTotal = Math.round(day1Entry.total * (1 + variance));
+                const exitTotal = Math.round(day1Exit.total * (1 + variance));
+
+                data.push({
+                    id: dateStr,
+                    date: dateStr,
+                    jsDate: new Date(currentDate),
+                    etc: {
+                        total: etcTotal,
+                        auto: Math.round(etcTotal * (day1ETC.pAuto/100)), pAuto: day1ETC.pAuto,
+                        inputEntry: Math.round(etcTotal * (day1ETC.pInputEntry/100)), pInputEntry: day1ETC.pInputEntry,
+                        autoLpr: Math.round(etcTotal * (day1ETC.pAutoLpr/100)), pAutoLpr: day1ETC.pAutoLpr,
+                        inputLpr: Math.round(etcTotal * (day1ETC.pInputLpr/100)), pInputLpr: day1ETC.pInputLpr,
+                        inputPlaza: Math.round(etcTotal * (day1ETC.pInputPlaza/100)), pInputPlaza: day1ETC.pInputPlaza,
+                        criteriaSum: (day1ETC.pAuto + day1ETC.pInputEntry + day1ETC.pAutoLpr + day1ETC.pInputLpr), 
+                        passed: true
+                    },
+                    lpr: {
+                        total: lprTotal,
+                        auto: Math.round(lprTotal * (day1LPR.pAuto/100)), pAuto: day1LPR.pAuto,
+                        inputMatch: Math.round(lprTotal * (day1LPR.pInputMatch/100)), pInputMatch: day1LPR.pInputMatch,
+                        inputPlaza: Math.round(lprTotal * (day1LPR.pInputPlaza/100)), pInputPlaza: day1LPR.pInputPlaza,
+                        criteriaSum: (day1LPR.pAuto + day1LPR.pInputMatch),
+                        passed: true
+                    },
+                    entryLpr: {
+                        total: entryTotal,
+                        lprH: Math.round(entryTotal * (day1Entry.lprHPercent/100)), lprHPercent: day1Entry.lprHPercent,
+                        lprL: Math.round(entryTotal * (day1Entry.lprLPercent/100)), lprLPercent: day1Entry.lprLPercent,
+                        passed: true
+                    },
+                    exitLpr: {
+                        total: exitTotal,
+                        lprH: Math.round(exitTotal * (day1Exit.lprHPercent/100)), lprHPercent: day1Exit.lprHPercent,
+                        lprL: Math.round(exitTotal * (day1Exit.lprLPercent/100)), lprLPercent: day1Exit.lprLPercent,
+                        passed: true
+                    }
+                });
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return data;
         }
 
         // --- COMPONENTS ---
@@ -379,7 +427,7 @@
 
             useEffect(() => {
                 if (window.Recharts) setRechartsLoaded(true);
-                setData(getInitialData());
+                setData(getInitialData()); // Initialize with mock data to show full table
 
                 const checkMobile = () => setIsMobile(window.innerWidth < 768);
                 checkMobile();
@@ -460,6 +508,7 @@
                         if (type === 'LPR') { setLprRaw(parsed); alert(`อัปโหลด LPR สำเร็จ: พบ ${parsed.length} รายการ`); }
                         if (type === 'EntryLPR') { setEntryLprRaw(parsed); alert(`อัปโหลด Entry LPR สำเร็จ: พบ ${parsed.length} รายการ`); }
                         if (type === 'ExitLPR') { setExitLprRaw(parsed); alert(`อัปโหลด Exit LPR สำเร็จ: พบ ${parsed.length} รายการ`); }
+                        setIsUsingRealData(true);
                     } catch (err) {
                         console.error(err);
                         alert("เกิดข้อผิดพลาดในการอ่านไฟล์: " + err.message);
@@ -470,7 +519,7 @@
 
             // Merge Logic
             useEffect(() => {
-                if (etcRaw || lprRaw || entryLprRaw || exitLprRaw) {
+                if (isUsingRealData && (etcRaw || lprRaw || entryLprRaw || exitLprRaw)) {
                     const mergedMap = new Map();
                     const allDates = new Set();
                     if (etcRaw) etcRaw.forEach(i => allDates.add(i.dateStr));
@@ -510,7 +559,7 @@
                         setData(mergedArray);
                     }
                 }
-            }, [etcRaw, lprRaw, entryLprRaw, exitLprRaw]);
+            }, [etcRaw, lprRaw, entryLprRaw, exitLprRaw, isUsingRealData]);
 
             const filteredData = useMemo(() => {
                 if (!dateRange.start && !dateRange.end) return data;
@@ -552,6 +601,7 @@
                 const etcGlobalPInputPlaza = totalEtc ? (etcSumInputPlaza / totalEtc) * 100 : 0;
                 const etcGlobalCriteria = etcGlobalPAuto + etcGlobalPInputEntry + etcGlobalPAutoLpr + etcGlobalPInputLpr;
 
+                // Entry & Exit Stats
                 const totalEntry = filteredData.reduce((acc, curr) => acc + (curr.entryLpr?.total || 0), 0);
                 const totalExit = filteredData.reduce((acc, curr) => acc + (curr.exitLpr?.total || 0), 0);
                 const entryH = filteredData.reduce((acc, curr) => acc + (curr.entryLpr?.lprH || 0), 0);
@@ -584,325 +634,359 @@
             return (
                 <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
                     {/* Top Bar */}
-                    <div className="bg-slate-800 text-white px-4 py-3 text-sm shadow-md sticky top-0 z-50">
+                    <div className="bg-slate-800 text-white px-6 py-3 text-sm shadow-md">
                         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-                                <div className="flex items-center gap-2">
-                                    <span className={`w-2.5 h-2.5 rounded-full shadow-lg ${isUsingRealData ? 'bg-green-400' : (autoFetchStatus === 'loading' ? 'bg-blue-400 animate-bounce' : 'bg-yellow-400 animate-pulse')}`}></span>
-                                    <span className="font-medium tracking-wide text-xs md:text-sm truncate max-w-[200px] md:max-w-none">
-                                        {autoFetchStatus === 'loading' ? 'กำลังดึงข้อมูล...' :
-                                         isUsingRealData ? 'โหมดข้อมูลจริง' : 'โหมดรอข้อมูล'}
-                                    </span>
-                                </div>
-                                {/* Mobile Menu Button */}
-                                <button className="md:hidden p-1 rounded hover:bg-slate-700" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                                    <IconMenu className="w-6 h-6" />
-                                </button>
+                            <div className="flex items-center gap-3">
+                                <span className={`w-3 h-3 rounded-full shadow-lg ${isUsingRealData ? 'bg-green-400' : (autoFetchStatus === 'loading' ? 'bg-blue-400 animate-bounce' : 'bg-yellow-400 animate-pulse')}`}></span>
+                                <span className="font-medium tracking-wide">
+                                    {autoFetchStatus === 'loading' ? 'กำลังค้นหาไฟล์ข้อมูลจาก GitHub...' :
+                                     isUsingRealData ? 'โหมดข้อมูลจริง (Real Data Active)' : 'โหมดรอข้อมูล'}
+                                </span>
                             </div>
-                            
-                            {/* Desktop Upload Buttons */}
-                            <div className="hidden md:flex items-center gap-3">
-                                {/* Upload buttons here (same as before) */}
-                                <label className="flex items-center gap-1 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-all border border-slate-600 text-xs">
-                                    <IconGithub className="w-3 h-3 text-purple-300" /> <span>LPR</span>
+                            <div className="flex items-center gap-4 flex-wrap">
+                                {/* Swapped Order: LPR First, then ETC */}
+                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-purple-400 hover:text-purple-300">
+                                    <IconGithub className="w-4 h-4 text-purple-300" />
+                                    <span className="font-medium">Override LPR</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'LPR')} className="hidden" />
                                 </label>
-                                <label className="flex items-center gap-1 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-all border border-slate-600 text-xs">
-                                    <IconGithub className="w-3 h-3 text-blue-300" /> <span>ETC</span>
+                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-blue-400 hover:text-blue-300">
+                                    <IconGithub className="w-4 h-4 text-blue-300" />
+                                    <span className="font-medium">Override ETC</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ETC')} className="hidden" />
                                 </label>
-                                <label className="flex items-center gap-1 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-all border border-slate-600 text-xs">
-                                    <IconGithub className="w-3 h-3 text-emerald-300" /> <span>Entry</span>
+                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-emerald-400 hover:text-emerald-300">
+                                    <IconGithub className="w-4 h-4 text-emerald-300" />
+                                    <span className="font-medium">Override Entry</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'EntryLPR')} className="hidden" />
                                 </label>
-                                <label className="flex items-center gap-1 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded transition-all border border-slate-600 text-xs">
-                                    <IconGithub className="w-3 h-3 text-pink-300" /> <span>Exit</span>
+                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-pink-400 hover:text-pink-300">
+                                    <IconGithub className="w-4 h-4 text-pink-300" />
+                                    <span className="font-medium">Override Exit</span>
                                     <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ExitLPR')} className="hidden" />
                                 </label>
                             </div>
                         </div>
-                        
-                        {/* Mobile Upload Menu */}
-                        {mobileMenuOpen && (
-                            <div className="md:hidden mt-3 grid grid-cols-2 gap-2 animate-in slide-in-from-top-2">
-                                <label className="flex items-center justify-center gap-2 cursor-pointer bg-slate-700 p-2 rounded text-xs">
-                                    <IconGithub className="w-4 h-4 text-purple-300" /> Upload LPR
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'LPR')} className="hidden" />
-                                </label>
-                                <label className="flex items-center justify-center gap-2 cursor-pointer bg-slate-700 p-2 rounded text-xs">
-                                    <IconGithub className="w-4 h-4 text-blue-300" /> Upload ETC
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ETC')} className="hidden" />
-                                </label>
-                                <label className="flex items-center justify-center gap-2 cursor-pointer bg-slate-700 p-2 rounded text-xs">
-                                    <IconGithub className="w-4 h-4 text-emerald-300" /> Upload Entry
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'EntryLPR')} className="hidden" />
-                                </label>
-                                <label className="flex items-center justify-center gap-2 cursor-pointer bg-slate-700 p-2 rounded text-xs">
-                                    <IconGithub className="w-4 h-4 text-pink-300" /> Upload Exit
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ExitLPR')} className="hidden" />
-                                </label>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Navbar Tabs */}
-                    <nav className="bg-white border-b border-slate-200 px-4 py-2 sticky top-[56px] z-40 shadow-sm overflow-x-auto whitespace-nowrap scrollbar-hide">
-                         <div className="flex space-x-2 md:justify-center">
-                            {['overview', 'lpr', 'etc', 'entry', 'exit'].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`px-4 py-1.5 text-xs md:text-sm font-semibold rounded-full transition-all duration-200 ${
-                                        activeTab === tab 
-                                            ? 'bg-slate-800 text-white shadow-md' 
-                                            : 'text-slate-500 hover:bg-slate-100'
-                                    }`}
-                                >
-                                    {tab === 'overview' && 'ภาพรวม'}
-                                    {tab === 'lpr' && 'LPR Match'}
-                                    {tab === 'etc' && 'ETC Match'}
-                                    {tab === 'entry' && 'Entry'}
-                                    {tab === 'exit' && 'Exit'}
-                                </button>
-                            ))}
+                    {/* Navbar */}
+                    <nav className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 shadow-sm/50 backdrop-blur-sm bg-white/90">
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-lg shadow-blue-200">
+                                    <IconActivity className="text-white w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Matching Dashboard</h1>
+                                    <p className="text-xs font-medium text-slate-500 mt-0.5">ระบบรายงานสถิติ LPR และ ETC ประจำวัน</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 overflow-x-auto">
+                                {['overview', 'lpr', 'etc', 'entry', 'exit'].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${
+                                            activeTab === tab 
+                                                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' 
+                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                        }`}
+                                    >
+                                        {tab === 'overview' && 'ภาพรวม (Overview)'}
+                                        {tab === 'lpr' && 'LPR Matching'}
+                                        {tab === 'etc' && 'ETC Matching'}
+                                        {tab === 'entry' && 'Entry LPR'}
+                                        {tab === 'exit' && 'Exit LPR'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </nav>
 
                     {/* Main Content */}
-                    <main className="max-w-7xl mx-auto px-4 py-6 md:px-6">
+                    <main className="max-w-7xl mx-auto px-6 py-8">
                         
                         {autoFetchStatus === 'error' && (
-                            <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-800 text-xs md:text-sm">
+                            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-800">
                                 <IconInfo className="w-5 h-5 mt-0.5 shrink-0" />
-                                <div><p className="font-semibold">ไม่พบข้อมูลอัตโนมัติ</p>ระบบไม่สามารถดึงข้อมูลจาก GitHub ได้ กรุณาใช้วิธีอัปโหลดไฟล์แทน</div>
+                                <div>
+                                    <p className="font-semibold">ไม่สามารถดึงข้อมูลอัตโนมัติจาก GitHub ได้</p>
+                                    <p className="text-sm mt-1 opacity-90">ระบบไม่สามารถเข้าถึงไฟล์ข้อมูลจาก GitHub Repository ได้โดยตรง อาจเป็นเพราะปัญหา CORS หรือ Path ไม่ถูกต้อง กรุณาใช้ปุ่ม <strong>Override</strong> ด้านบนเพื่ออัปโหลดไฟล์ด้วยตัวเอง</p>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {autoFetchStatus === 'success' && (
+                            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3 text-green-800">
+                                <IconCheck className="w-5 h-5 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="font-semibold">ดึงข้อมูลสำเร็จ</p>
+                                    <p className="text-sm mt-1 opacity-90">ข้อมูลล่าสุดถูกโหลดมาจาก GitHub เรียบร้อยแล้ว</p>
+                                </div>
                             </div>
                         )}
 
-                        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-4 items-end md:items-center">
-                            <div className="flex items-center gap-2 w-full md:w-auto text-sm text-slate-600 font-semibold">
-                                <IconFilter className="w-4 h-4" /> ตัวกรอง:
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-wrap items-center gap-6">
+                            <div className="flex items-center gap-2 text-slate-700 font-semibold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                <IconFilter className="w-4 h-4 text-slate-500" />
+                                <span>ตัวกรอง:</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-3 w-full md:w-auto md:flex">
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">จากวันที่</label>
-                                    <input type="date" className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-slate-400 mb-1">ถึงวันที่</label>
-                                    <input type="date" className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} />
-                                </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-slate-500">จากวันที่:</span>
+                                <input type="date" className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} />
                             </div>
-                            <button onClick={() => setDateRange({ start: '', end: '' })} className="w-full md:w-auto text-xs font-medium text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 px-3 py-2 rounded transition-colors ml-auto">ล้างค่า</button>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-slate-500">ถึงวันที่:</span>
+                                <input type="date" className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} />
+                            </div>
+                            <button onClick={() => setDateRange({ start: '', end: '' })} className="text-sm font-medium text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg ml-auto">ล้างค่าตัวกรอง</button>
                         </div>
 
                         {!stats ? (
-                            <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border-2 border-dashed border-slate-200 text-slate-400">
-                                <IconFileText className="w-10 h-10 mb-2 opacity-50" />
-                                <p className="text-sm">ไม่พบข้อมูลในช่วงเวลานี้</p>
+                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+                                <IconFileText className="w-8 h-8 text-slate-400 mb-4" />
+                                <p className="text-slate-600 font-medium">ไม่พบข้อมูลตามช่วงวันที่เลือก</p>
                             </div>
                         ) : (
                             <>
                                 {activeTab === 'overview' && (
-                                    <div className="space-y-6 animate-in fade-in duration-300">
-                                        
-                                        {/* 1. LPR Matching Section */}
-                                        <div className="space-y-3">
-                                            <h3 className="text-base font-bold text-purple-700 flex items-center gap-2"><span className="w-1 h-5 bg-purple-600 rounded-full"></span> LPR Matching</h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
-                                                <StatCard title="Total Transactions" value={stats.totalLpr.toLocaleString()} subValue="รายการ" icon={IconActivity} colorClass="text-blue-600" />
-                                                <StatCard title="Avg KPI Score" value={`${stats.avgLprCriteria}%`} subValue="Target > 90.25%" icon={IconCheckCircle} colorClass="text-blue-600" />
+                                    <div className="space-y-8 animate-in fade-in duration-500">
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3"><div className="h-8 w-1 bg-purple-600 rounded-full"></div><h3 className="text-lg font-bold text-purple-700">LPR Matching Overview</h3></div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <StatCard title="Total LPR Transaction" value={stats.totalLpr.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-blue-600" bgClass="bg-white border-purple-100" />
+                                                <StatCard title="Avg LPR KPI Score" value={`${stats.avgLprCriteria}%`} subValue="Target > 90.25%" icon={IconCheckCircle} colorClass="text-blue-600" bgClass="bg-white border-purple-100" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4 pt-6 border-t border-slate-200">
+                                            <div className="flex items-center gap-3"><div className="h-8 w-1 bg-orange-600 rounded-full"></div><h3 className="text-lg font-bold text-orange-700">ETC Matching Overview</h3></div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <StatCard title="Total ETC Transaction" value={stats.totalEtc.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-orange-600" bgClass="bg-white border-orange-100" />
+                                                {/* Corrected: Avg ETC KPI Score in Orange */}
+                                                <StatCard title="Avg ETC KPI Score" value={`${stats.avgEtcCriteria}%`} subValue="Target > 98%" icon={IconCheckCircle} colorClass="text-orange-600" bgClass="bg-white border-orange-100" />
                                             </div>
                                         </div>
 
-                                        {/* 2. ETC Matching Section */}
-                                        <div className="space-y-3 pt-4 border-t border-slate-100">
-                                            <h3 className="text-base font-bold text-orange-700 flex items-center gap-2"><span className="w-1 h-5 bg-orange-600 rounded-full"></span> ETC Matching</h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-2 gap-3">
-                                                <StatCard title="Total Transactions" value={stats.totalEtc.toLocaleString()} subValue="รายการ" icon={IconActivity} colorClass="text-orange-600" />
-                                                <StatCard title="Avg KPI Score" value={`${stats.avgEtcCriteria}%`} subValue="Target > 98%" icon={IconCheckCircle} colorClass="text-orange-600" />
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><IconBarChart3 className="w-5 h-5 text-slate-400" />ปริมาณจราจร</h3>
+                                                <div className="h-80"><ResponsiveContainer width="100%" height="100%"><AreaChart data={comparisonData}><defs><linearGradient id="colorEtc" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ea580c" stopOpacity={0.1}/><stop offset="95%" stopColor="#ea580c" stopOpacity={0}/></linearGradient><linearGradient id="colorLpr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis tickFormatter={(value) => `${value / 1000}k`} tick={{fontSize: 12, fill: '#94a3b8'}} stroke="#94a3b8" tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><Area type="monotone" dataKey="ETC Total" stroke="#ea580c" fillOpacity={1} fill="url(#colorEtc)" strokeWidth={2} /><Area type="monotone" dataKey="LPR Total" stroke="#2563eb" fillOpacity={1} fill="url(#colorLpr)" strokeWidth={2} /></AreaChart></ResponsiveContainer></div>
+                                            </div>
+                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><IconActivity className="w-5 h-5 text-slate-400" />แนวโน้ม KPI</h3>
+                                                <div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={criteriaData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis domain={[80, 100]} tick={{fontSize: 12, fill: '#94a3b8'}} stroke="#94a3b8" unit="%" tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><ReferenceLine y={98} stroke="#ea580c" strokeDasharray="3 3" label={{ value: 'Target 98%', position: 'insideTopLeft', fill: '#ea580c', fontSize: 12 }} /><ReferenceLine y={90.25} stroke="#2563eb" strokeDasharray="3 3" label={{ value: 'Target 90.25%', position: 'insideBottomLeft', fill: '#2563eb', fontSize: 12 }} /><Line type="monotone" dataKey="ETC KPI %" stroke="#ea580c" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /><Line type="monotone" dataKey="LPR KPI %" stroke="#2563eb" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /></LineChart></ResponsiveContainer></div>
                                             </div>
                                         </div>
 
-                                        {/* Charts */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                                                <h3 className="text-sm font-bold text-slate-700 mb-4">ปริมาณจราจร (Volume)</h3>
-                                                <div className="h-64"><ResponsiveContainer width="100%" height="100%"><AreaChart data={comparisonData} margin={{left: -20}}><defs><linearGradient id="colorEtc" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ea580c" stopOpacity={0.1}/><stop offset="95%" stopColor="#ea580c" stopOpacity={0}/></linearGradient><linearGradient id="colorLpr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" tick={<CustomAxisTick />} /><YAxis tick={{fontSize: 10}} /><Tooltip content={<CustomRechartsTooltip />} /><Area type="monotone" dataKey="ETC Total" stroke="#ea580c" fill="url(#colorEtc)" /><Area type="monotone" dataKey="LPR Total" stroke="#2563eb" fill="url(#colorLpr)" /></AreaChart></ResponsiveContainer></div>
-                                            </div>
-                                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                                                <h3 className="text-sm font-bold text-slate-700 mb-4">แนวโน้ม KPI (Trend)</h3>
-                                                <div className="h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={criteriaData} margin={{left: -20}}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" tick={<CustomAxisTick />} /><YAxis domain={[80, 100]} tick={{fontSize: 10}} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><Line type="monotone" dataKey="ETC KPI %" stroke="#ea580c" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="LPR KPI %" stroke="#2563eb" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div>
+                                        {/* Moved Entry & Exit Overview Section Below Graph */}
+                                        <div className="space-y-4 pt-6 border-t border-slate-200">
+                                            <div className="flex items-center gap-3"><div className="h-8 w-1 bg-teal-600 rounded-full"></div><h3 className="text-lg font-bold text-teal-700">Entry & Exit LPR Overview</h3></div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                <StatCard title="Entry LPR Total" value={stats.entryLpr.total.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-emerald-600" bgClass="bg-white border-emerald-100" />
+                                                <StatCard title="Entry Accuracy" value={`${stats.entryLpr.lprHPercent.toFixed(2)}%`} subValue="Target > 95%" icon={IconCheckCircle} colorClass="text-emerald-600" bgClass="bg-white border-emerald-100" />
+                                                <StatCard title="Exit LPR Total" value={stats.exitLpr.total.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-pink-600" bgClass="bg-white border-pink-100" />
+                                                <StatCard title="Exit Accuracy" value={`${stats.exitLpr.lprHPercent.toFixed(2)}%`} subValue="Target > 95%" icon={IconCheckCircle} colorClass="text-pink-600" bgClass="bg-white border-pink-100" />
                                             </div>
                                         </div>
 
-                                        {/* 3. Entry & Exit Overview */}
-                                        <div className="space-y-3 pt-4 border-t border-slate-100">
-                                            <h3 className="text-base font-bold text-teal-700 flex items-center gap-2"><span className="w-1 h-5 bg-teal-600 rounded-full"></span> Entry & Exit LPR</h3>
-                                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                                <StatCard title="Entry Total" value={stats.entryLpr.total.toLocaleString()} subValue="รายการ" icon={IconActivity} colorClass="text-emerald-600" />
-                                                <StatCard title="Entry Accuracy" value={`${stats.entryLpr.lprHPercent.toFixed(2)}%`} subValue="> 95%" icon={IconCheckCircle} colorClass="text-emerald-600" />
-                                                <StatCard title="Exit Total" value={stats.exitLpr.total.toLocaleString()} subValue="รายการ" icon={IconActivity} colorClass="text-pink-600" />
-                                                <StatCard title="Exit Accuracy" value={`${stats.exitLpr.lprHPercent.toFixed(2)}%`} subValue="> 95%" icon={IconCheckCircle} colorClass="text-pink-600" />
-                                            </div>
-                                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mt-4">
-                                                <div className="h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={accuracyData} margin={{left: -20}}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="date" tick={<CustomAxisTick />} /><YAxis domain={[90, 100]} tick={{fontSize: 10}} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><Line type="monotone" dataKey="Entry LPR (%)" stroke="#10b981" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="Exit LPR (%)" stroke="#f43f5e" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer></div>
-                                            </div>
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-6">
+                                            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><IconActivity className="w-5 h-5 text-teal-500" />Entry & Exit LPR Accuracy</h3>
+                                            <div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={accuracyData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis domain={[90, 100]} tick={{fontSize: 12, fill: '#94a3b8'}} stroke="#94a3b8" unit="%" tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><ReferenceLine y={95} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Target 95%', position: 'right', fill: '#10b981', fontSize: 12 }} /><Line type="monotone" dataKey="Entry LPR (%)" stroke="#10b981" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /><Line type="monotone" dataKey="Exit LPR (%)" stroke="#f43f5e" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /></LineChart></ResponsiveContainer></div>
                                         </div>
                                     </div>
                                 )}
 
                                 {activeTab === 'lpr' && (
-                                    <div className="space-y-6 animate-in fade-in duration-300">
-                                        {/* Mobile: Card View / Desktop: Table View */}
-                                        {isMobile ? (
-                                            <div>
-                                                {filteredData.map(row => <MobileTableRowCard key={row.id} row={row} type="lpr" />)}
-                                            </div>
-                                        ) : (
-                                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                                <div className="overflow-x-auto custom-scrollbar">
-                                                    <table className="w-full text-xs text-left whitespace-nowrap">
-                                                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b uppercase tracking-wider text-[11px]">
-                                                            <tr>
-                                                                <th rowSpan="2" className="px-4 py-3 border-r text-center text-sm">วันที่</th>
-                                                                <th rowSpan="2" className="px-4 py-3 border-r text-center text-sm">Total</th>
-                                                                <th colSpan="2" className="px-2 py-1 border-b border-r text-center bg-purple-50 text-purple-900">Auto Match</th>
-                                                                <th colSpan="2" className="px-2 py-1 border-b border-r text-center bg-teal-50 text-teal-900">Input LPR</th>
-                                                                <th colSpan="2" className="px-2 py-1 border-b border-r text-center bg-amber-50 text-amber-900">Input Plaza</th>
-                                                                <th rowSpan="2" className="px-4 py-3 border-r text-center">KPI (%)</th>
-                                                                <th rowSpan="2" className="px-4 py-3 text-center">Status</th>
-                                                            </tr>
-                                                            <tr>
-                                                                <th className="px-2 py-1 text-center border-r bg-purple-50/50">Total</th>
-                                                                <th className="px-2 py-1 text-center border-r bg-purple-50/50">%</th>
-                                                                <th className="px-2 py-1 text-center border-r bg-teal-50/50">Total</th>
-                                                                <th className="px-2 py-1 text-center border-r bg-teal-50/50">%</th>
-                                                                <th className="px-2 py-1 text-center border-r bg-amber-50/50">Total</th>
-                                                                <th className="px-2 py-1 text-center border-r bg-amber-50/50">%</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-100">
-                                                            {filteredData.map(row => (
-                                                                <tr key={row.id} className="hover:bg-slate-50">
-                                                                    <td className="px-4 py-3 font-medium text-center">{row.date}</td>
-                                                                    <td className="px-4 py-3 font-mono text-center">{row.lpr.total.toLocaleString()}</td>
-                                                                    <td className="px-2 py-3 text-center font-mono text-purple-700 bg-purple-50/20">{row.lpr.auto.toLocaleString()}</td>
-                                                                    <td className="px-2 py-3 text-center font-bold text-purple-700 bg-purple-50/20">{row.lpr.pAuto.toFixed(2)}%</td>
-                                                                    <td className="px-2 py-3 text-center font-mono text-teal-700 bg-teal-50/20">{row.lpr.inputMatch.toLocaleString()}</td>
-                                                                    <td className="px-2 py-3 text-center font-bold text-teal-700 bg-teal-50/20">{row.lpr.pInputMatch.toFixed(2)}%</td>
-                                                                    <td className="px-2 py-3 text-center font-mono text-amber-700 bg-amber-50/20">{row.lpr.inputPlaza.toLocaleString()}</td>
-                                                                    <td className="px-2 py-3 text-center font-bold text-amber-700 bg-amber-50/20">{row.lpr.pInputPlaza.toFixed(2)}%</td>
-                                                                    <td className="px-4 py-3 text-center font-bold">{row.lpr.criteriaSum.toFixed(2)}%</td>
-                                                                    <td className="px-4 py-3 text-center"><StatusBadge passed={row.lpr.passed} /></td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        )}
+                                    <div className="space-y-6 animate-in fade-in duration-500">
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                            <div className="flex justify-between mb-8"><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><IconActivity className="w-5 h-5 text-purple-600" />LPR Performance</h3></div>
+                                            <div className="h-96"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={filteredData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis yAxisId="left" orientation="left" domain={[85, 100]} unit="%" stroke="#7c3aed" fontSize={12} tickLine={false} axisLine={false} /><YAxis yAxisId="right" orientation="right" stroke="#cbd5e1" tickFormatter={(val) => `${val/1000}k`} fontSize={12} tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Bar yAxisId="right" dataKey="lpr.total" name="Traffic Volume" barSize={32} fill="#a78bfa" fillOpacity={0.25} radius={[6, 6, 0, 0]} /><ReferenceLine yAxisId="left" y={90.25} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Target 90.25%', position: 'insideTopRight', fill: '#ef4444', fontSize: 12 }} /><Line yAxisId="left" type="monotone" dataKey="lpr.criteriaSum" name="LPR KPI Score" stroke="#7c3aed" strokeWidth={3} dot={{r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff'}} /></ComposedChart></ResponsiveContainer></div>
+                                        </div>
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                            <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2"><IconFileText className="w-5 h-5 text-purple-600" /><h3 className="font-bold text-slate-800">ตารางข้อมูล LPR Matching</h3></div>
+                                            <div className="overflow-x-auto custom-scrollbar"><table className="w-full text-xs md:text-sm text-left whitespace-nowrap"><thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+                                                <tr>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100 text-base">วันที่</th>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100 text-base">Total</th>
+                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-purple-100 text-purple-900">Auto Matching</th>
+                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-teal-100 text-teal-900">Input LPR</th>
+                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-amber-100 text-amber-900">Input Plaza</th>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100">KPI Score (%)</th>
+                                                    <th rowSpan="2" className="px-5 py-4 border-b border-slate-200 text-center bg-slate-100">Status</th>
+                                                </tr>
+                                                <tr>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-purple-50/50 text-purple-900">Total</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-purple-50/50 text-purple-900">%</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-teal-50/50 text-teal-900">Total</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-teal-50/50 text-teal-900">%</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-amber-50/50 text-amber-900">Total</th>
+                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-amber-50/50 text-amber-900">%</th>
+                                                </tr>
+                                            </thead><tbody className="divide-y divide-slate-100">{filteredData.map((row) => (<tr key={row.id} className="hover:bg-slate-50"><td className="px-5 py-3.5 font-medium text-slate-700 text-center">{row.date}</td><td className="px-5 py-3.5 text-center font-mono text-slate-600">{row.lpr.total.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-center font-mono text-purple-700">{row.lpr.auto.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-center text-purple-700 font-semibold">{row.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-3.5 bg-teal-50/30 text-center font-mono text-teal-700">{row.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-3.5 bg-teal-50/30 text-center text-teal-700">{row.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-3.5 bg-amber-50/30 text-center font-mono text-amber-700">{row.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-3.5 bg-amber-50/30 text-center text-amber-700">{row.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-3.5 text-center"><span className={`px-2.5 py-0.5 rounded-full font-bold ${row.lpr.criteriaSum > 90.25 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}`}>{row.lpr.criteriaSum.toFixed(2)}%</span></td><td className="px-5 py-3.5 text-center"><StatusBadge passed={row.lpr.passed} /></td></tr>))}
+                                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-300"><td className="px-5 py-4 text-slate-800 text-center">รวม / เฉลี่ย</td><td className="px-5 py-4 text-center font-mono">{stats.lpr.total.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-center font-mono text-purple-900">{stats.lpr.auto.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-center text-purple-900">{stats.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-4 bg-teal-200/50 text-center font-mono text-teal-900">{stats.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-4 bg-teal-200/50 text-center text-teal-900">{stats.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-4 bg-amber-200/50 text-center font-mono text-amber-900">{stats.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-4 bg-amber-200/50 text-center text-amber-900">{stats.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-4 text-center text-slate-800">{stats.avgLprCriteria}%</td><td className="px-5 py-4 text-center text-xs text-slate-400">AVG</td></tr>
+                                            </tbody></table></div>
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* ETC Tab: Similar Structure with Mobile Card Support */}
                                 {activeTab === 'etc' && (
-                                    <div className="space-y-6 animate-in fade-in duration-300">
-                                        {isMobile ? (
-                                            <div>{filteredData.map(row => <MobileTableRowCard key={row.id} row={row} type="etc" />)}</div>
-                                        ) : (
-                                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                                <div className="overflow-x-auto custom-scrollbar">
-                                                    <table className="w-full text-xs text-left whitespace-nowrap table-compact">
-                                                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b uppercase tracking-wider text-[10px]">
-                                                            <tr>
-                                                                <th rowSpan="2" className="py-3 px-2 border-r text-center text-sm">วันที่</th>
-                                                                <th rowSpan="2" className="py-3 px-2 border-r text-center text-sm">Total</th>
-                                                                <th colSpan="2" className="py-1 px-1 border-b border-r text-center bg-blue-100 text-blue-900">Auto</th>
-                                                                <th colSpan="2" className="py-1 px-1 border-b border-r text-center bg-emerald-100 text-emerald-900">Handheld</th>
-                                                                <th colSpan="2" className="py-1 px-1 border-b border-r text-center bg-orange-100 text-orange-900">Auto LPR</th>
-                                                                <th colSpan="2" className="py-1 px-1 border-b border-r text-center bg-indigo-100 text-indigo-900">In. LPR</th>
-                                                                <th colSpan="2" className="py-1 px-1 border-b border-r text-center bg-gray-100 text-gray-900">In. Plaza</th>
-                                                                <th rowSpan="2" className="py-3 px-2 border-r text-center">KPI(%)</th>
-                                                                <th rowSpan="2" className="py-3 px-2 text-center">Status</th>
+                                    <div className="space-y-6 animate-in fade-in duration-500">
+                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                            <div className="flex justify-between mb-8"><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><IconActivity className="w-5 h-5 text-orange-600" />ETC Performance</h3></div>
+                                            <div className="h-96"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={filteredData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis yAxisId="left" orientation="left" domain={[94, 100]} unit="%" stroke="#ea580c" fontSize={12} tickLine={false} axisLine={false} /><YAxis yAxisId="right" orientation="right" stroke="#cbd5e1" tickFormatter={(val) => `${val/1000}k`} fontSize={12} tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Bar yAxisId="right" dataKey="etc.total" name="Traffic Volume" barSize={32} fill="#fdba74" fillOpacity={0.25} radius={[6, 6, 0, 0]} /><ReferenceLine yAxisId="left" y={98} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Target 98%', position: 'insideTopRight', fill: '#ef4444', fontSize: 12 }} /><Line yAxisId="left" type="monotone" dataKey="etc.criteriaSum" name="ETC KPI Score" stroke="#ea580c" strokeWidth={3} dot={{r: 4, fill: '#ea580c', strokeWidth: 2, stroke: '#fff'}} /></ComposedChart></ResponsiveContainer></div>
+                                        </div>
+                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                            <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2"><IconFileText className="w-5 h-5 text-orange-600" /><h3 className="font-bold text-slate-800">ตารางข้อมูล ETC Matching</h3></div>
+                                            {/* ETC Table optimized for fit without scroll */}
+                                            <div className="overflow-x-auto custom-scrollbar">
+                                                <table className="w-full text-[10px] md:text-xs text-left whitespace-nowrap table-compact">
+                                                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider">
+                                                        <tr>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100 text-base">วันที่</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100 text-base">Total</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-100 text-blue-900">Auto</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-100 text-emerald-900">Handheld</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-100 text-orange-900">Auto Matching LPR</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-100 text-indigo-900">Input LPR</th>
+                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-100 text-gray-900">Input Plaza</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100">KPI(%)</th>
+                                                            <th rowSpan="2" className="py-3 px-2 border-b border-slate-200 text-center bg-slate-100">Status</th>
+                                                        </tr>
+                                                        <tr>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-50/50 text-blue-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-50/50 text-blue-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-50/50 text-orange-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-50/50 text-orange-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">%</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-50/50 text-gray-900">Total</th>
+                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-50/50 text-gray-900">%</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {filteredData.map((row) => (
+                                                            <tr key={row.id} className="hover:bg-slate-50">
+                                                                <td className="py-2 font-medium text-slate-700 text-center">{row.date}</td>
+                                                                <td className="py-2 text-center font-mono text-slate-600">{row.etc.total.toLocaleString()}</td>
+                                                                <td className="py-2 bg-blue-50/30 text-center font-mono text-blue-700">{row.etc.auto.toLocaleString()}</td>
+                                                                <td className="py-2 bg-blue-50/30 text-center text-blue-700 font-semibold">{row.etc.pAuto.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-emerald-50/30 text-center font-mono text-emerald-700">{row.etc.inputEntry.toLocaleString()}</td>
+                                                                <td className="py-2 bg-emerald-50/30 text-center text-emerald-700">{row.etc.pInputEntry.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-orange-50/30 text-center font-mono text-orange-700">{row.etc.autoLpr.toLocaleString()}</td>
+                                                                <td className="py-2 bg-orange-50/30 text-center text-orange-700">{row.etc.pAutoLpr.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-indigo-50/30 text-center font-mono text-indigo-700">{row.etc.inputLpr.toLocaleString()}</td>
+                                                                <td className="py-2 bg-indigo-50/30 text-center text-indigo-700">{row.etc.pInputLpr.toFixed(2)}%</td>
+                                                                <td className="py-2 bg-gray-50/50 text-center font-mono text-gray-600">{row.etc.inputPlaza.toLocaleString()}</td>
+                                                                <td className="py-2 bg-gray-50/50 text-center text-gray-600">{row.etc.pInputPlaza.toFixed(2)}%</td>
+                                                                <td className="py-2 text-center font-bold">{row.etc.criteriaSum.toFixed(2)}%</td>
+                                                                <td className="py-2 text-center"><StatusBadge passed={row.etc.passed} /></td>
                                                             </tr>
-                                                            <tr>
-                                                                {/* Sub-headers for Total/% repeated */}
-                                                                {[...Array(5)].map((_, i) => (
-                                                                    <React.Fragment key={i}>
-                                                                        <th className="py-1 px-1 text-center border-r bg-slate-50/50">Total</th>
-                                                                        <th className="py-1 px-1 text-center border-r bg-slate-50/50">%</th>
-                                                                    </React.Fragment>
-                                                                ))}
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-100">
-                                                            {filteredData.map(row => (
-                                                                <tr key={row.id} className="hover:bg-slate-50">
-                                                                    <td className="py-2 text-center font-medium">{row.date}</td>
-                                                                    <td className="py-2 text-center font-mono">{row.etc.total.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center font-mono text-blue-700 bg-blue-50/20">{row.etc.auto.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center font-bold text-blue-700 bg-blue-50/20">{row.etc.pAuto.toFixed(2)}%</td>
-                                                                    <td className="py-2 text-center font-mono text-emerald-700 bg-emerald-50/20">{row.etc.inputEntry.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center font-bold text-emerald-700 bg-emerald-50/20">{row.etc.pInputEntry.toFixed(2)}%</td>
-                                                                    <td className="py-2 text-center font-mono text-orange-700 bg-orange-50/20">{row.etc.autoLpr.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center font-bold text-orange-700 bg-orange-50/20">{row.etc.pAutoLpr.toFixed(2)}%</td>
-                                                                    <td className="py-2 text-center font-mono text-indigo-700 bg-indigo-50/20">{row.etc.inputLpr.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center font-bold text-indigo-700 bg-indigo-50/20">{row.etc.pInputLpr.toFixed(2)}%</td>
-                                                                    <td className="py-2 text-center font-mono text-gray-600 bg-gray-50/20">{row.etc.inputPlaza.toLocaleString()}</td>
-                                                                    <td className="py-2 text-center font-bold text-gray-600 bg-gray-50/20">{row.etc.pInputPlaza.toFixed(2)}%</td>
-                                                                    <td className="py-2 text-center font-bold">{row.etc.criteriaSum.toFixed(2)}%</td>
-                                                                    <td className="py-2 text-center"><StatusBadge passed={row.etc.passed} /></td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                        ))}
+                                                        <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                                                            <td className="py-2 text-slate-800 text-center">Total</td>
+                                                            <td className="py-2 text-center font-mono">{stats.etc.total.toLocaleString()}</td>
+                                                            <td className="py-2 bg-blue-200/50 text-center font-mono text-blue-900">{stats.etc.auto.toLocaleString()}</td>
+                                                            <td className="py-2 bg-blue-200/50 text-center text-blue-900">{stats.etc.pAuto.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-emerald-200/50 text-center font-mono text-emerald-900">{stats.etc.inputEntry.toLocaleString()}</td>
+                                                            <td className="py-2 bg-emerald-200/50 text-center text-emerald-900">{stats.etc.pInputEntry.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-orange-200/50 text-center font-mono text-orange-900">{stats.etc.autoLpr.toLocaleString()}</td>
+                                                            <td className="py-2 bg-orange-200/50 text-center text-orange-900">{stats.etc.pAutoLpr.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-indigo-200/50 text-center font-mono text-indigo-900">{stats.etc.inputLpr.toLocaleString()}</td>
+                                                            <td className="py-2 bg-indigo-200/50 text-center text-indigo-900">{stats.etc.pInputLpr.toFixed(2)}%</td>
+                                                            <td className="py-2 bg-gray-200/50 text-center font-mono text-gray-800">{stats.etc.inputPlaza.toLocaleString()}</td>
+                                                            <td className="py-2 bg-gray-200/50 text-center text-gray-800">{stats.etc.pInputPlaza.toFixed(2)}%</td>
+                                                            <td className="py-2 text-center text-slate-800">{stats.avgEtcCriteria}%</td>
+                                                            <td className="py-2 text-center text-xs text-slate-400">AVG</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 )}
 
                                 {['entry', 'exit'].map(type => (
                                     activeTab === type && (
-                                        <div key={type} className="space-y-6 animate-in fade-in duration-300">
-                                            {isMobile ? (
-                                                <div>{filteredData.map(row => <MobileTableRowCard key={row.id} row={row} type={type} />)}</div>
-                                            ) : (
-                                                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                                    <div className="overflow-x-auto custom-scrollbar">
-                                                        <table className="w-full text-xs text-left whitespace-nowrap">
-                                                            <thead className="bg-slate-50 text-slate-600 font-semibold border-b uppercase tracking-wider text-[11px]">
-                                                                <tr>
-                                                                    <th className="px-6 py-4 text-center">วันที่</th>
-                                                                    <th className="px-6 py-4 text-right">Total</th>
-                                                                    <th className={`px-6 py-4 text-right ${type === 'entry' ? 'bg-emerald-50 text-emerald-900' : 'bg-emerald-50 text-emerald-900'}`}>LPR &gt; 95%</th>
-                                                                    <th className={`px-6 py-4 text-right ${type === 'entry' ? 'bg-emerald-50 text-emerald-900' : 'bg-emerald-50 text-emerald-900'}`}>%</th>
-                                                                    <th className="px-6 py-4 text-right bg-rose-50 text-rose-900">LPR &lt; 95%</th>
-                                                                    <th className="px-6 py-4 text-right bg-rose-50 text-rose-900">%</th>
-                                                                    <th className="px-6 py-4 text-center">Status</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody className="divide-y divide-slate-100">
-                                                                {filteredData.map(row => {
-                                                                    const item = row[`${type}Lpr`];
-                                                                    if (!item) return null;
-                                                                    return (
-                                                                        <tr key={row.id} className="hover:bg-slate-50">
-                                                                            <td className="px-6 py-3.5 font-medium text-center">{row.date}</td>
-                                                                            <td className="px-6 py-3.5 text-right font-mono">{item.total.toLocaleString()}</td>
-                                                                            <td className={`px-6 py-3.5 text-right font-mono ${type === 'entry' ? 'bg-emerald-50/30 text-emerald-700' : 'bg-emerald-50/30 text-emerald-700'}`}>{item.lprH.toLocaleString()}</td>
-                                                                            <td className={`px-6 py-3.5 text-right font-bold ${type === 'entry' ? 'bg-emerald-50/30 text-emerald-700' : 'bg-emerald-50/30 text-emerald-700'}`}>{item.lprHPercent.toFixed(2)}%</td>
-                                                                            <td className="px-6 py-3.5 text-right font-mono bg-rose-50/30 text-rose-700">{item.lprL.toLocaleString()}</td>
-                                                                            <td className="px-6 py-3.5 text-right font-bold bg-rose-50/30 text-rose-700">{item.lprLPercent.toFixed(2)}%</td>
-                                                                            <td className="px-6 py-3.5 text-center"><StatusBadge passed={item.passed} /></td>
-                                                                        </tr>
-                                                                    );
-                                                                })}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
+                                        <div key={type} className="space-y-6 animate-in fade-in duration-500">
+                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                                                <div className="flex justify-between mb-8">
+                                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                                        <IconActivity className={`w-5 h-5 ${type === 'entry' ? 'text-emerald-600' : 'text-pink-600'}`} />
+                                                        {type === 'entry' ? 'Entry LPR Accuracy' : 'Exit LPR Accuracy'}
+                                                    </h3>
                                                 </div>
-                                            )}
+                                                <div className="h-96">
+                                                    <ResponsiveContainer width="100%" height="100%">
+                                                        <ComposedChart data={filteredData}>
+                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                            <XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} />
+                                                            <YAxis yAxisId="left" orientation="left" domain={[80, 100]} unit="%" stroke={type === 'entry' ? '#059669' : '#e11d48'} fontSize={12} tickLine={false} axisLine={false} />
+                                                            <YAxis yAxisId="right" orientation="right" stroke="#cbd5e1" tickFormatter={(val) => `${val/1000}k`} fontSize={12} tickLine={false} axisLine={false} />
+                                                            <Tooltip content={<CustomRechartsTooltip />} />
+                                                            <Bar yAxisId="right" dataKey={`${type}Lpr.total`} name="Total Volume" barSize={32} fill={type === 'entry' ? '#a7f3d0' : '#fecdd3'} fillOpacity={0.4} radius={[6, 6, 0, 0]} />
+                                                            <ReferenceLine yAxisId="left" y={95} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Target 95%', position: 'insideTopRight', fill: '#ef4444', fontSize: 12 }} />
+                                                            <Line yAxisId="left" type="monotone" dataKey={`${type}Lpr.lprHPercent`} name="% LPR > 95%" stroke={type === 'entry' ? '#059669' : '#e11d48'} strokeWidth={3} dot={{r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff'}} />
+                                                        </ComposedChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                                                <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2">
+                                                    <IconFileText className={`w-5 h-5 ${type === 'entry' ? 'text-emerald-600' : 'text-pink-600'}`} />
+                                                    <h3 className="font-bold text-slate-800">{type === 'entry' ? 'Entry LPR Data' : 'Exit LPR Data'}</h3>
+                                                </div>
+                                                <div className="overflow-x-auto custom-scrollbar">
+                                                    <table className="w-full text-xs md:text-sm text-left whitespace-nowrap">
+                                                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider">
+                                                            <tr>
+                                                                <th className="px-6 py-4">วันที่</th>
+                                                                <th className="px-6 py-4 text-right">Total</th>
+                                                                {/* Corrected Exit LPR Header Colors */}
+                                                                <th className={`px-6 py-4 text-right ${type === 'entry' ? 'bg-emerald-50 text-emerald-900' : 'bg-emerald-50 text-emerald-900'}`}>LPR &gt; 95%</th>
+                                                                <th className={`px-6 py-4 text-right ${type === 'entry' ? 'bg-emerald-50 text-emerald-900' : 'bg-emerald-50 text-emerald-900'}`}>%</th>
+                                                                {/* Corrected Entry/Exit LPR < 95% Header Colors to Red */}
+                                                                <th className="px-6 py-4 text-right text-rose-900 bg-rose-50">LPR &lt; 95%</th>
+                                                                <th className="px-6 py-4 text-right text-rose-900 bg-rose-50">%</th>
+                                                                <th className="px-6 py-4 text-center">Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-100">
+                                                            {filteredData.map((row) => {
+                                                                const item = row[`${type}Lpr`];
+                                                                // Safety check for undefined item to prevent ReferenceError
+                                                                if (!item) return null; 
+
+                                                                return (
+                                                                    <tr key={row.id} className="hover:bg-slate-50">
+                                                                        <td className="px-6 py-3.5 font-medium text-slate-700">{row.date}</td>
+                                                                        <td className="px-6 py-3.5 text-right font-mono text-slate-600">{(item.total || 0).toLocaleString()}</td>
+                                                                        {/* Corrected Exit LPR Data Colors */}
+                                                                        <td className={`px-6 py-3.5 text-right font-mono ${type === 'entry' ? 'bg-emerald-50/30 text-emerald-700' : 'bg-emerald-50/30 text-emerald-700'}`}>{(item.lprH || 0).toLocaleString()}</td>
+                                                                        <td className={`px-6 py-3.5 text-right font-bold ${type === 'entry' ? 'bg-emerald-50/30 text-emerald-700' : 'bg-emerald-50/30 text-emerald-700'}`}>{(item.lprHPercent || 0).toFixed(2)}%</td>
+                                                                        {/* Corrected Entry/Exit LPR < 95% Data Colors to Red */}
+                                                                        <td className="px-6 py-3.5 text-right font-mono text-rose-700 bg-rose-50/30">{(item.lprL || 0).toLocaleString()}</td>
+                                                                        <td className="px-6 py-3.5 text-right font-bold text-rose-700 bg-rose-50/30">{(item.lprLPercent || 0).toFixed(2)}%</td>
+                                                                        <td className="px-6 py-3.5 text-center"><StatusBadge passed={item.passed} /></td>
+                                                                    </tr>
+                                                                );
+                                                            })}
+                                                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
+                                                                <td className="px-6 py-4 text-slate-800">รวม / เฉลี่ย</td>
+                                                                <td className="px-6 py-4 text-right font-mono">{(stats[`${type}Lpr`]?.total || 0).toLocaleString()}</td>
+                                                                {/* Corrected Summary Row Colors */}
+                                                                <td className={`px-6 py-4 text-right font-mono ${type === 'entry' ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-100 text-emerald-900'}`}>{(stats[`${type}Lpr`]?.lprH || 0).toLocaleString()}</td>
+                                                                <td className={`px-6 py-4 text-right font-bold ${type === 'entry' ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-100 text-emerald-900'}`}>{(stats[`${type}Lpr`]?.lprHPercent || 0).toFixed(2)}%</td>
+                                                                <td className="px-6 py-4 text-right font-mono text-rose-900 bg-rose-100">{(stats[`${type}Lpr`]?.lprL || 0).toLocaleString()}</td>
+                                                                <td className="px-6 py-4 text-right font-bold text-rose-900 bg-rose-100">{(stats[`${type}Lpr`]?.lprLPercent || 0).toFixed(2)}%</td>
+                                                                <td className="px-6 py-4 text-center text-xs text-slate-400">AVG</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
                                         </div>
                                     )
                                 ))}
