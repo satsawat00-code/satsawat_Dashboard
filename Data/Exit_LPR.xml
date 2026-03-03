@@ -254,6 +254,56 @@
 <Field Name="lprlpercent1" FieldName="{DatasPeriod.lpr_l_percent}"><FormattedValue>3.36</FormattedValue><Value>3.36</Value></Field>
 </Section>
 </Details>
+<Details Level="1">
+<Section SectionNumber="0">
+<Field Name="date1" FieldName="{DatasPeriod.date}"><FormattedValue>26/02/2569</FormattedValue><Value>26/02/2569</Value></Field>
+<Field Name="total1" FieldName="{DatasPeriod.total}"><FormattedValue>238,536</FormattedValue><Value>238536</Value></Field>
+<Field Name="lprh1" FieldName="{DatasPeriod.lpr_h}"><FormattedValue>230,673</FormattedValue><Value>230673</Value></Field>
+<Field Name="lprhpercent1" FieldName="{DatasPeriod.lpr_h_percent}"><FormattedValue>96.70</FormattedValue><Value>96.70</Value></Field>
+<Field Name="lprl1" FieldName="{DatasPeriod.lpr_l}"><FormattedValue>7,863</FormattedValue><Value>7863</Value></Field>
+<Field Name="lprlpercent1" FieldName="{DatasPeriod.lpr_l_percent}"><FormattedValue>3.30</FormattedValue><Value>3.30</Value></Field>
+</Section>
+</Details>
+<Details Level="1">
+<Section SectionNumber="0">
+<Field Name="date1" FieldName="{DatasPeriod.date}"><FormattedValue>27/02/2569</FormattedValue><Value>27/02/2569</Value></Field>
+<Field Name="total1" FieldName="{DatasPeriod.total}"><FormattedValue>253,556</FormattedValue><Value>253556</Value></Field>
+<Field Name="lprh1" FieldName="{DatasPeriod.lpr_h}"><FormattedValue>245,022</FormattedValue><Value>245022</Value></Field>
+<Field Name="lprhpercent1" FieldName="{DatasPeriod.lpr_h_percent}"><FormattedValue>96.63</FormattedValue><Value>96.63</Value></Field>
+<Field Name="lprl1" FieldName="{DatasPeriod.lpr_l}"><FormattedValue>8,534</FormattedValue><Value>8534</Value></Field>
+<Field Name="lprlpercent1" FieldName="{DatasPeriod.lpr_l_percent}"><FormattedValue>3.37</FormattedValue><Value>3.37</Value></Field>
+</Section>
+</Details>
+<Details Level="1">
+<Section SectionNumber="0">
+<Field Name="date1" FieldName="{DatasPeriod.date}"><FormattedValue>28/02/2569</FormattedValue><Value>28/02/2569</Value></Field>
+<Field Name="total1" FieldName="{DatasPeriod.total}"><FormattedValue>226,569</FormattedValue><Value>226569</Value></Field>
+<Field Name="lprh1" FieldName="{DatasPeriod.lpr_h}"><FormattedValue>218,913</FormattedValue><Value>218913</Value></Field>
+<Field Name="lprhpercent1" FieldName="{DatasPeriod.lpr_h_percent}"><FormattedValue>96.62</FormattedValue><Value>96.62</Value></Field>
+<Field Name="lprl1" FieldName="{DatasPeriod.lpr_l}"><FormattedValue>7,656</FormattedValue><Value>7656</Value></Field>
+<Field Name="lprlpercent1" FieldName="{DatasPeriod.lpr_l_percent}"><FormattedValue>3.38</FormattedValue><Value>3.38</Value></Field>
+</Section>
+</Details>
+<Details Level="1">
+<Section SectionNumber="0">
+<Field Name="date1" FieldName="{DatasPeriod.date}"><FormattedValue>01/03/2569</FormattedValue><Value>01/03/2569</Value></Field>
+<Field Name="total1" FieldName="{DatasPeriod.total}"><FormattedValue>176,919</FormattedValue><Value>176919</Value></Field>
+<Field Name="lprh1" FieldName="{DatasPeriod.lpr_h}"><FormattedValue>170,690</FormattedValue><Value>170690</Value></Field>
+<Field Name="lprhpercent1" FieldName="{DatasPeriod.lpr_h_percent}"><FormattedValue>96.48</FormattedValue><Value>96.48</Value></Field>
+<Field Name="lprl1" FieldName="{DatasPeriod.lpr_l}"><FormattedValue>6,229</FormattedValue><Value>6229</Value></Field>
+<Field Name="lprlpercent1" FieldName="{DatasPeriod.lpr_l_percent}"><FormattedValue>3.52</FormattedValue><Value>3.52</Value></Field>
+</Section>
+</Details>
+<Details Level="1">
+<Section SectionNumber="0">
+<Field Name="date1" FieldName="{DatasPeriod.date}"><FormattedValue>02/03/2569</FormattedValue><Value>02/03/2569</Value></Field>
+<Field Name="total1" FieldName="{DatasPeriod.total}"><FormattedValue>231,160</FormattedValue><Value>231160</Value></Field>
+<Field Name="lprh1" FieldName="{DatasPeriod.lpr_h}"><FormattedValue>223,347</FormattedValue><Value>223347</Value></Field>
+<Field Name="lprhpercent1" FieldName="{DatasPeriod.lpr_h_percent}"><FormattedValue>96.62</FormattedValue><Value>96.62</Value></Field>
+<Field Name="lprl1" FieldName="{DatasPeriod.lpr_l}"><FormattedValue>7,813</FormattedValue><Value>7813</Value></Field>
+<Field Name="lprlpercent1" FieldName="{DatasPeriod.lpr_l_percent}"><FormattedValue>3.38</FormattedValue><Value>3.38</Value></Field>
+</Section>
+</Details>
 <ReportFooter>
 <Section SectionNumber="0">
 <Text Name="Text54"><TextValue>Total</TextValue>
