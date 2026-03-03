@@ -162,7 +162,7 @@
                         const pAutoLpr = parseNum(rowRaw['percentautolpr1']);
                         const pInputLpr = parseNum(rowRaw['percentinputlpr1']);
                         const pInputPlaza = parseNum(rowRaw['percentinputplaza1']);
-                        const criteriaSum = pAuto + pInputEntry + pAutoLpr + pInputLpr;
+                        const criteriaSum = 100 - pInputPlaza;
                         extractedData.push({
                             dateStr: rowRaw['date1'], dateObj,
                             etc: { total, auto, pAuto, inputEntry, pInputEntry, autoLpr, pAutoLpr, inputLpr, pInputLpr, inputPlaza, pInputPlaza, criteriaSum, passed: criteriaSum > 98 }
