@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="บันทึกสลิป">
-    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1024px-GitHub_Invertocat_Logo.svg.png"> <!-- สามารถเปลี่ยนเป็นรูปไอคอนแอปของคุณได้ -->
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1024px-GitHub_Invertocat_Logo.svg.png">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,7 +18,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Custom styles to match React's animate-in */
         @keyframes fadeInSlideDown {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -26,7 +25,6 @@
         .animate-fade-in-down {
             animation: fadeInSlideDown 0.2s ease-out forwards;
         }
-        /* Hide scrollbar for cleaner look if needed */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -47,16 +45,26 @@
             
             <div class="w-full md:w-auto">
                 <button id="toggleSettingsBtn" class="w-full md:w-auto flex justify-between items-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium transition-colors">
-                    <span class="flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> ตั้งค่า Google Sheet</span>
+                    <span class="flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> ตั้งค่าระบบ</span>
                     <i id="settingsIcon" data-lucide="chevron-down" class="w-4 h-4"></i>
                 </button>
                 
                 <div id="settingsPanel" class="hidden mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200 animate-fade-in-down">
-                    <label class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
-                        <i data-lucide="link" class="w-3.5 h-3.5"></i> Web App URL
-                    </label>
-                    <input type="text" id="sheetUrlInput" placeholder="วาง URL จาก Google Apps Script ที่นี่..." class="w-full md:w-80 border-slate-200 rounded-lg p-2.5 text-sm bg-white border outline-none focus:border-indigo-500" />
-                    <p class="text-xs text-slate-400 mt-2">ใส่ URL เพื่อให้ระบบส่งข้อมูลเข้า Sheet อัตโนมัติ</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                                <i data-lucide="link" class="w-3.5 h-3.5"></i> Web App URL (Google Sheet)
+                            </label>
+                            <input type="text" id="sheetUrlInput" placeholder="วาง URL จาก Google Apps Script ที่นี่..." class="w-full border-slate-200 rounded-lg p-2.5 text-sm bg-white border outline-none focus:border-indigo-500" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                                <i data-lucide="key" class="w-3.5 h-3.5"></i> Gemini API Key
+                            </label>
+                            <input type="password" id="apiKeyInput" placeholder="วาง API Key สำหรับอ่านสลิปที่นี่..." class="w-full border-slate-200 rounded-lg p-2.5 text-sm bg-white border outline-none focus:border-indigo-500" />
+                            <p class="text-xs text-slate-400 mt-2">จำเป็นต้องใส่เพื่อวิเคราะห์รูปภาพ (<a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-500 hover:underline">รับ API Key ฟรีได้ที่นี่</a>)</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -132,7 +140,7 @@
                     <h2 class="text-lg font-bold mb-4">เพิ่มรายการเอง (Manual)</h2>
                     
                     <div id="errorMsgContainer" class="hidden mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
-                        <i data-lucide="alert-circle" class="w-4 h-4"></i> <span id="errorMsgText"></span>
+                        <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i> <span id="errorMsgText"></span>
                     </div>
 
                     <form id="manualForm" class="space-y-4">
@@ -190,12 +198,10 @@
 
                     <!-- Records Data View -->
                     <div id="recordsView" class="hidden">
-                        <!-- มุมมองมือถือ: แสดงเป็น Card ซ้อนกัน -->
-                        <div id="mobileCards" class="block md:hidden divide-y divide-slate-100">
-                            <!-- Cards will be injected here via JS -->
-                        </div>
+                        <!-- มุมมองมือถือ -->
+                        <div id="mobileCards" class="block md:hidden divide-y divide-slate-100"></div>
 
-                        <!-- มุมมอง Desktop: แสดงเป็น Table ปกติ -->
+                        <!-- มุมมอง Desktop -->
                         <table class="hidden md:table w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
@@ -207,9 +213,7 @@
                                     <th class="p-4 font-medium border-b border-slate-100 text-center">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody id="desktopTableBody" class="divide-y divide-slate-100">
-                                <!-- Rows will be injected here via JS -->
-                            </tbody>
+                            <tbody id="desktopTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
                     </div>
                 </div>
@@ -225,6 +229,7 @@
         // -----------------------
         let records = [];
         let sheetUrl = localStorage.getItem('slipTracker_sheetUrl') || '';
+        let storedApiKey = localStorage.getItem('slipTracker_apiKey') || '';
         let showSettings = false;
         let isProcessing = false;
 
@@ -235,6 +240,7 @@
         const settingsIcon = document.getElementById('settingsIcon');
         const settingsPanel = document.getElementById('settingsPanel');
         const sheetUrlInput = document.getElementById('sheetUrlInput');
+        const apiKeyInput = document.getElementById('apiKeyInput'); // <-- เพิ่มใหม่
         
         const balanceAmount = document.getElementById('balanceAmount');
         const incomeAmount = document.getElementById('incomeAmount');
@@ -265,13 +271,9 @@
         // -----------------------
         // Initialization
         // -----------------------
-        // Set today's date in form
         formDate.value = new Date().toISOString().split('T')[0];
-        // โหลด URL ที่เคยบันทึกไว้มาแสดงในช่องกรอก
-        if (sheetUrl) {
-            sheetUrlInput.value = sheetUrl;
-        }
-        // Initialize Lucide Icons
+        if (sheetUrl) sheetUrlInput.value = sheetUrl;
+        if (storedApiKey) apiKeyInput.value = storedApiKey; // โหลด API Key
         lucide.createIcons();
 
         // -----------------------
@@ -316,7 +318,6 @@
                 const amountColorClass = isIncome ? 'text-green-600' : 'text-red-600';
                 const badgeColorClass = isIncome ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
                 
-                // Status HTML Generation
                 let statusHtml = '';
                 if (record.syncStatus === 'syncing') {
                     statusHtml = `<span class="text-blue-500 flex justify-center items-center gap-1"><i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> ${window.innerWidth < 768 ? 'กำลังส่ง...' : 'กำลังส่ง'}</span>`;
@@ -328,14 +329,12 @@
                     statusHtml = `<span class="text-slate-400 flex items-center gap-1">- ไม่ได้เชื่อม URL</span>`;
                 }
 
-                // Delete Button HTML
                 const deleteBtnHtml = `
                     <button onclick="handleDelete('${record.id}')" class="${window.innerWidth < 768 ? 'text-slate-400 hover:text-red-500 p-1 bg-white rounded' : 'p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-flex'}" title="ลบเฉพาะในหน้าจอนี้ (ไม่ลบใน Sheet)">
                         <i data-lucide="trash-2" class="${window.innerWidth < 768 ? 'w-4 h-4' : 'w-[18px] h-[18px]'}"></i>
                     </button>
                 `;
 
-                // 1. Mobile Card HTML
                 const cardHtml = `
                     <div class="p-4 hover:bg-slate-50 transition-colors">
                         <div class="flex justify-between items-start mb-2">
@@ -360,7 +359,6 @@
                 `;
                 mobileCards.insertAdjacentHTML('beforeend', cardHtml);
 
-                // 2. Desktop Row HTML
                 const rowHtml = `
                     <tr class="hover:bg-slate-50 transition-colors">
                         <td class="p-4 text-sm whitespace-nowrap">${record.date}</td>
@@ -385,7 +383,6 @@
                 desktopTableBody.insertAdjacentHTML('beforeend', rowHtml);
             });
 
-            // Re-initialize icons for newly added HTML
             lucide.createIcons();
         }
 
@@ -428,7 +425,7 @@
                 uploadDefaultUI.classList.remove('hidden');
                 uploadProcessingUI.classList.add('hidden');
                 uploadProcessingUI.classList.remove('flex');
-                fileInput.value = ''; // Reset input
+                fileInput.value = '';
             }
         }
 
@@ -436,7 +433,6 @@
         // Event Listeners & Actions
         // -----------------------
 
-        // Toggle Settings
         toggleSettingsBtn.addEventListener('click', () => {
             showSettings = !showSettings;
             if (showSettings) {
@@ -449,19 +445,22 @@
             lucide.createIcons();
         });
 
-        // Update Sheet URL
         sheetUrlInput.addEventListener('input', (e) => {
             sheetUrl = e.target.value.trim();
             localStorage.setItem('slipTracker_sheetUrl', sheetUrl);
         });
 
-        // Delete Record
+        // บันทึก API Key ใหม่
+        apiKeyInput.addEventListener('input', (e) => {
+            storedApiKey = e.target.value.trim();
+            localStorage.setItem('slipTracker_apiKey', storedApiKey);
+        });
+
         window.handleDelete = function(id) {
             records = records.filter(r => r.id !== id);
             updateUI();
         };
 
-        // Manual Form Submit
         manualForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -480,24 +479,20 @@
                 syncStatus: 'syncing'
             };
 
-            // Add to UI immediately
             records = [newRecord, ...records];
             showError('');
             updateUI();
             
-            // Reset form fields
             formDate.value = new Date().toISOString().split('T')[0];
             formPayee.value = '';
             formAmount.value = '';
             formType.value = 'รายจ่าย';
             formCategory.value = 'อาหาร';
 
-            // Sync
             const syncResult = await syncToGoogleSheet(newRecord);
             updateRecordStatus(newRecord.id, syncResult);
         });
 
-        // Update Sync Status in state and re-render
         function updateRecordStatus(id, result) {
             const index = records.findIndex(r => r.id === id);
             if (index !== -1) {
@@ -510,7 +505,6 @@
             }
         }
 
-        // File Upload Change
         fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
@@ -523,15 +517,15 @@
                 setProcessingState(true, `กำลังอ่านภาพที่ ${i + 1}/${files.length}...`, previewUrl);
 
                 try {
-                    // Convert to Base64
                     const base64String = await new Promise((resolve) => {
                         const reader = new FileReader();
                         reader.onloadend = () => resolve(reader.result.split(',')[1]);
                         reader.readAsDataURL(file);
                     });
 
-                    // Call Gemini API
-                    const extractedData = await processImageWithGemini(base64String, file.type);
+                    // ตรวจสอบชนิดไฟล์ (เผื่อ iOS คืนค่าว่าง)
+                    const safeMimeType = file.type || 'image/jpeg';
+                    const extractedData = await processImageWithGemini(base64String, safeMimeType);
                     
                     if (extractedData) {
                         const newRecord = {
@@ -544,17 +538,15 @@
                             syncStatus: 'syncing'
                         };
 
-                        // Add to table
                         records = [newRecord, ...records];
                         updateUI();
 
-                        // Sync to Sheet
                         const syncResult = await syncToGoogleSheet(newRecord);
                         updateRecordStatus(newRecord.id, syncResult);
                     }
                 } catch (err) {
                     console.error(`Error processing file ${i+1}:`, err);
-                    showError(`ภาพที่ ${i + 1} อ่านไม่สำเร็จ โปรดตรวจสอบไฟล์`);
+                    showError(`ภาพที่ ${i + 1} อ่านไม่สำเร็จ: ${err.message}`);
                 }
             }
 
@@ -589,7 +581,12 @@
         }
 
         async function processImageWithGemini(base64Data, mimeType) {
-            const apiKey = ""; // API Key ฉีดอัตโนมัติจากระบบ
+            const apiKey = ""; // API Key ฉีดอัตโนมัติ (สำหรับ Canvas)
+            const finalKey = storedApiKey || apiKey; // ใช้ Key จาก Settings ก่อน ถ้าไม่มีค่อยใช้ของ Canvas
+
+            if (!finalKey) {
+                throw new Error("ยังไม่ได้ใส่ API Key ในตั้งค่า");
+            }
             
             const prompt = `
                 คุณคือผู้เชี่ยวชาญด้านบัญชี กรุณาวิเคราะห์ภาพสลิปโอนเงินธนาคารหรือใบเสร็จรับเงินนี้ 
@@ -598,7 +595,7 @@
                 หากเป็นสลิปโอนเงินเข้า ให้ถือเป็น 'รายรับ'
             `;
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${finalKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
