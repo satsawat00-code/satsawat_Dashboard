@@ -3,1002 +3,634 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LPR & ETC Matching Dashboard</title>
+    <title>ระบบบันทึกรายรับ-รายจ่ายอัจฉริยะ</title>
     
-    <!-- Libraries via CDN (Pinned Versions for Stability) -->
-    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.12.3/umd/Recharts.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- PWA - iOS Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="บันทึกสลิป">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/GitHub_Invertocat_Logo.svg/1024px-GitHub_Invertocat_Logo.svg.png"> <!-- สามารถเปลี่ยนเป็นรูปไอคอนแอปของคุณได้ -->
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Custom Font: Noto Sans Thai -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        body { font-family: 'Noto Sans Thai', sans-serif; }
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        /* Tighter table for ETC */
-        .table-compact th, .table-compact td { padding-left: 0.25rem; padding-right: 0.25rem; }
+        /* Custom styles to match React's animate-in */
+        @keyframes fadeInSlideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-down {
+            animation: fadeInSlideDown 0.2s ease-out forwards;
+        }
+        /* Hide scrollbar for cleaner look if needed */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-    <div id="root"></div>
+<body class="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8">
 
-    <script type="text/babel">
-        const { useState, useMemo, useEffect } = React;
-
-        // --- ICONS ---
-        const IconActivity = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>;
-        const IconCheckCircle = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-        const IconBarChart3 = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>;
-        const IconCheck = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"/></svg>;
-        const IconX = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>;
-        const IconUpload = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>;
-        const IconFileText = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>;
-        const IconFilter = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
-        const IconInfo = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>;
-        const IconGithub = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>;
-        const IconMenu = ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="3" x2="21" y1="6" y2="6"/><line x1="3" x2="21" y1="12" y2="12"/><line x1="3" x2="21" y1="18" y2="18"/></svg>;
-
-        // --- UTILITIES ---
-        const parseThaiDate = (dateStr) => {
-            if (!dateStr || typeof dateStr !== 'string') return null;
-            const parts = dateStr.split('/');
-            if (parts.length !== 3) return null;
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1; 
-            const yearBE = parseInt(parts[2], 10);
-            const yearAD = yearBE - 543;
-            return new Date(yearAD, month, day);
-        };
-
-        const parseInputDate = (dateStr) => {
-            if (!dateStr) return null;
-            const [y, m, d] = dateStr.split('-').map(Number);
-            return new Date(y, m - 1, d);
-        };
-
-        const isWeekend = (date) => {
-            const day = date.getDay();
-            return day === 0 || day === 6; 
-        };
-
-        const CustomAxisTick = (props) => {
-            const { x, y, payload } = props;
-            const dateObj = parseThaiDate(payload.value);
-            const isHoliday = dateObj ? isWeekend(dateObj) : false;
-            return (
-                <g transform={`translate(${x},${y})`}>
-                    <text x={0} y={0} dy={16} textAnchor="middle" fill={isHoliday ? "#ef4444" : "#64748b"} fontSize={10} fontWeight={isHoliday ? "bold" : "normal"}>
-                        {payload.value}
-                    </text>
-                </g>
-            );
-        };
-
-        const getFormattedVal = (fieldElement) => {
-            if (!fieldElement) return null;
-            const fmtTag = fieldElement.getElementsByTagName('FormattedValue')[0];
-            if (fmtTag && fmtTag.textContent !== undefined) return fmtTag.textContent.trim();
-            const valTag = fieldElement.getElementsByTagName('Value')[0];
-            if (valTag && valTag.textContent !== undefined) return valTag.textContent.trim();
-            return null;
-        };
-
-        const parseNum = (str) => {
-            if (!str) return 0;
-            const cleanStr = str.replace(/,/g, '');
-            const num = parseFloat(cleanStr);
-            return isNaN(num) ? 0 : num;
-        };
-
-        // --- XML PARSER ---
-        const parseXMLData = (xmlText, type) => {
-            let cleanText = xmlText;
-            const rootCloseTag = "</CrystalReport>";
-            const closeIndex = cleanText.lastIndexOf(rootCloseTag);
-            if (closeIndex !== -1) {
-                cleanText = cleanText.substring(0, closeIndex + rootCloseTag.length);
-            }
-            cleanText = cleanText.replace(/xmlns="[^"]*"/g, "").replace(/xmlns:[a-zA-Z0-9]+="[^"]*"/g, "");
-            cleanText = cleanText.replace(/xsi:schemaLocation\s*=\s*["'][^"']*["']/g, "");
-
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(cleanText, "text/xml");
-            const parserError = xmlDoc.getElementsByTagName("parsererror");
+    <div class="max-w-6xl mx-auto space-y-6">
+        
+        <!-- Header & Settings -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="dollar-sign" class="text-green-500 w-7 h-7"></i> 
+                    ระบบบันทึกรายรับ-รายจ่ายอัจฉริยะ
+                </h1>
+                <p class="text-slate-500 mt-1 text-sm md:text-base">อัปโหลดสลิปทีละหลายภาพ และบันทึกเข้า Sheet อัตโนมัติ</p>
+            </div>
             
-            if (parserError.length > 0) { 
-                console.error("XML Parsing Error:", parserError[0].textContent);
-                return []; 
+            <div class="w-full md:w-auto">
+                <button id="toggleSettingsBtn" class="w-full md:w-auto flex justify-between items-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium transition-colors">
+                    <span class="flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> ตั้งค่า Google Sheet</span>
+                    <i id="settingsIcon" data-lucide="chevron-down" class="w-4 h-4"></i>
+                </button>
+                
+                <div id="settingsPanel" class="hidden mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200 animate-fade-in-down">
+                    <label class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                        <i data-lucide="link" class="w-3.5 h-3.5"></i> Web App URL
+                    </label>
+                    <input type="text" id="sheetUrlInput" placeholder="วาง URL จาก Google Apps Script ที่นี่..." class="w-full md:w-80 border-slate-200 rounded-lg p-2.5 text-sm bg-white border outline-none focus:border-indigo-500" />
+                    <p class="text-xs text-slate-400 mt-2">ใส่ URL เพื่อให้ระบบส่งข้อมูลเข้า Sheet อัตโนมัติ</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            <div class="col-span-2 md:col-span-1 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                    <i data-lucide="dollar-sign" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <p class="text-xs md:text-sm text-slate-500 font-medium">ยอดคงเหลือ</p>
+                    <p id="balanceAmount" class="text-xl md:text-2xl font-bold text-slate-800">฿0</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 md:gap-4">
+                <div class="p-2 md:p-3 bg-green-100 text-green-600 rounded-xl shrink-0">
+                    <i data-lucide="arrow-down-circle" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-slate-500 font-medium truncate">รายรับทั้งหมด</p>
+                    <p id="incomeAmount" class="text-lg md:text-2xl font-bold text-green-600 truncate">฿0</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-3 md:gap-4">
+                <div class="p-2 md:p-3 bg-red-100 text-red-600 rounded-xl shrink-0">
+                    <i data-lucide="arrow-up-circle" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-slate-500 font-medium truncate">รายจ่ายทั้งหมด</p>
+                    <p id="expenseAmount" class="text-lg md:text-2xl font-bold text-red-500 truncate">฿0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Left Column: Upload & Form -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Upload Section (Multiple) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="file-image" class="w-5 h-5 text-indigo-500"></i>
+                        อัปโหลดสลิป (เลือกได้หลายภาพ)
+                    </h2>
+                    
+                    <div id="uploadDropzone" class="relative border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-slate-50 rounded-xl p-8 text-center transition-colors">
+                        <input type="file" id="fileInput" accept="image/*" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        
+                        <!-- Default Upload UI -->
+                        <div id="uploadDefaultUI" class="flex flex-col items-center justify-center space-y-3 text-slate-500">
+                            <div class="p-3 bg-indigo-100 text-indigo-500 rounded-full">
+                                <i data-lucide="upload" class="w-6 h-6"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-slate-700">ลากไฟล์มาวาง หรือคลิก</p>
+                                <p class="text-sm mt-1">ระบบจะวิเคราะห์และบันทึกลงตารางทันที</p>
+                            </div>
+                        </div>
+
+                        <!-- Processing UI (Hidden by default) -->
+                        <div id="uploadProcessingUI" class="hidden flex-col items-center justify-center space-y-3 text-indigo-600">
+                            <i data-lucide="loader-2" class="w-8 h-8 animate-spin"></i>
+                            <p id="processStatusText" class="font-bold">กำลังอ่านภาพ...</p>
+                            <img id="currentPreviewImg" src="" alt="Processing" class="hidden h-20 opacity-50 rounded shadow" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Section -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <h2 class="text-lg font-bold mb-4">เพิ่มรายการเอง (Manual)</h2>
+                    
+                    <div id="errorMsgContainer" class="hidden mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center gap-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i> <span id="errorMsgText"></span>
+                    </div>
+
+                    <form id="manualForm" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">ประเภท</label>
+                                <select id="formType" class="w-full border-slate-200 rounded-lg p-2.5 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 outline-none text-sm">
+                                    <option value="รายจ่าย">รายจ่าย</option>
+                                    <option value="รายรับ">รายรับ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">วันที่</label>
+                                <input type="date" id="formDate" class="w-full border-slate-200 rounded-lg p-2.5 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">หมวดหมู่</label>
+                            <input type="text" id="formCategory" value="อาหาร" placeholder="เช่น อาหาร, เดินทาง" class="w-full border-slate-200 rounded-lg p-2.5 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">รายการ</label>
+                            <input type="text" id="formPayee" placeholder="ชื่อร้านค้า" class="w-full border-slate-200 rounded-lg p-2.5 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 outline-none text-sm" />
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">จำนวนเงิน</label>
+                            <input type="number" id="formAmount" placeholder="0.00" step="0.01" min="0" inputmode="decimal" class="w-full border-slate-200 rounded-lg p-2.5 bg-slate-50 border focus:ring-2 focus:ring-indigo-500 outline-none text-lg font-semibold" />
+                        </div>
+
+                        <button type="submit" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white p-3 rounded-xl font-medium transition-colors mt-2">
+                            <i data-lucide="plus" class="w-5 h-5"></i> เพิ่มและส่งเข้า Sheet
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Data Table -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold">รายการล่าสุด</h2>
+                        <p class="text-sm text-slate-500">ข้อมูลจะถูกส่งเข้า Sheet อัตโนมัติ (หากใส่ URL)</p>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto flex-1 p-0">
+                    <!-- Empty State -->
+                    <div id="emptyState" class="flex flex-col items-center justify-center h-64 text-slate-400">
+                        <i data-lucide="cloud-lightning" class="w-12 h-12 mb-4 text-slate-300"></i>
+                        <p>ยังไม่มีรายการบันทึก</p>
+                    </div>
+
+                    <!-- Records Data View -->
+                    <div id="recordsView" class="hidden">
+                        <!-- มุมมองมือถือ: แสดงเป็น Card ซ้อนกัน -->
+                        <div id="mobileCards" class="block md:hidden divide-y divide-slate-100">
+                            <!-- Cards will be injected here via JS -->
+                        </div>
+
+                        <!-- มุมมอง Desktop: แสดงเป็น Table ปกติ -->
+                        <table class="hidden md:table w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                    <th class="p-4 font-medium border-b border-slate-100">วันที่</th>
+                                    <th class="p-4 font-medium border-b border-slate-100">รายการ/ผู้รับ</th>
+                                    <th class="p-4 font-medium border-b border-slate-100">หมวดหมู่</th>
+                                    <th class="p-4 font-medium border-b border-slate-100 text-right">จำนวนเงิน</th>
+                                    <th class="p-4 font-medium border-b border-slate-100 text-center">Sheet Status</th>
+                                    <th class="p-4 font-medium border-b border-slate-100 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desktopTableBody" class="divide-y divide-slate-100">
+                                <!-- Rows will be injected here via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // -----------------------
+        // App State
+        // -----------------------
+        let records = [];
+        let sheetUrl = '';
+        let showSettings = false;
+        let isProcessing = false;
+
+        // -----------------------
+        // DOM Elements
+        // -----------------------
+        const toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+        const settingsIcon = document.getElementById('settingsIcon');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const sheetUrlInput = document.getElementById('sheetUrlInput');
+        
+        const balanceAmount = document.getElementById('balanceAmount');
+        const incomeAmount = document.getElementById('incomeAmount');
+        const expenseAmount = document.getElementById('expenseAmount');
+
+        const uploadDropzone = document.getElementById('uploadDropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadDefaultUI = document.getElementById('uploadDefaultUI');
+        const uploadProcessingUI = document.getElementById('uploadProcessingUI');
+        const processStatusText = document.getElementById('processStatusText');
+        const currentPreviewImg = document.getElementById('currentPreviewImg');
+
+        const errorMsgContainer = document.getElementById('errorMsgContainer');
+        const errorMsgText = document.getElementById('errorMsgText');
+
+        const manualForm = document.getElementById('manualForm');
+        const formDate = document.getElementById('formDate');
+        const formType = document.getElementById('formType');
+        const formCategory = document.getElementById('formCategory');
+        const formPayee = document.getElementById('formPayee');
+        const formAmount = document.getElementById('formAmount');
+
+        const emptyState = document.getElementById('emptyState');
+        const recordsView = document.getElementById('recordsView');
+        const mobileCards = document.getElementById('mobileCards');
+        const desktopTableBody = document.getElementById('desktopTableBody');
+
+        // -----------------------
+        // Initialization
+        // -----------------------
+        // Set today's date in form
+        formDate.value = new Date().toISOString().split('T')[0];
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // -----------------------
+        // Core Functions
+        // -----------------------
+        
+        function updateDashboard() {
+            const totalIncome = records.filter(r => r.type === 'รายรับ').reduce((sum, r) => sum + Number(r.amount), 0);
+            const totalExpense = records.filter(r => r.type === 'รายจ่าย').reduce((sum, r) => sum + Number(r.amount), 0);
+            const balance = totalIncome - totalExpense;
+
+            incomeAmount.textContent = `฿${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
+            expenseAmount.textContent = `฿${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
+            balanceAmount.textContent = `฿${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})}`;
+            
+            if (balance >= 0) {
+                balanceAmount.className = "text-xl md:text-2xl font-bold text-slate-800";
+            } else {
+                balanceAmount.className = "text-xl md:text-2xl font-bold text-red-500";
+            }
+        }
+
+        function renderRecords() {
+            if (records.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                recordsView.classList.add('hidden');
+                return;
             }
 
-            const extractedData = [];
-            const sections = xmlDoc.getElementsByTagName("Section");
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+            recordsView.classList.remove('hidden');
 
-            for (let i = 0; i < sections.length; i++) {
-                const section = sections[i];
-                const fields = section.getElementsByTagName("Field");
-                if (fields.length === 0) continue;
+            mobileCards.innerHTML = '';
+            desktopTableBody.innerHTML = '';
 
-                let rowRaw = {};
-                let hasData = false;
-
-                for (let j = 0; j < fields.length; j++) {
-                    const field = fields[j];
-                    const name = field.getAttribute("Name");
-                    const value = getFormattedVal(field);
-                    if (name && value !== null) { rowRaw[name] = value; hasData = true; }
+            records.forEach(record => {
+                const amountFormatted = Number(record.amount).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+                const isIncome = record.type === 'รายรับ';
+                const sign = isIncome ? '+' : '-';
+                const amountColorClass = isIncome ? 'text-green-600' : 'text-red-600';
+                const badgeColorClass = isIncome ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+                
+                // Status HTML Generation
+                let statusHtml = '';
+                if (record.syncStatus === 'syncing') {
+                    statusHtml = `<span class="text-blue-500 flex justify-center items-center gap-1"><i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> ${window.innerWidth < 768 ? 'กำลังส่ง...' : 'กำลังส่ง'}</span>`;
+                } else if (record.syncStatus === 'synced') {
+                    statusHtml = `<span class="text-green-600 flex justify-center items-center gap-1"><i data-lucide="check-circle-2" class="w-3 h-3"></i> ${window.innerWidth < 768 ? 'บันทึกใน Sheet แล้ว' : 'บันทึกแล้ว'}</span>`;
+                } else if (record.syncStatus === 'failed') {
+                    statusHtml = `<span class="text-red-500 flex items-center gap-1">❌ ผิดพลาด</span>`;
+                } else if (record.syncStatus === 'local') {
+                    statusHtml = `<span class="text-slate-400 flex items-center gap-1">- ไม่ได้เชื่อม URL</span>`;
                 }
 
-                if (hasData && rowRaw['date1']) { 
-                    const dateObj = parseThaiDate(rowRaw['date1']);
-                    if (type === 'LPR') {
-                        const total = parseNum(rowRaw['total1']);
-                        const auto = parseNum(rowRaw['autolpr1']);
-                        const inputMatch = parseNum(rowRaw['inputlpr1']);
-                        const inputPlaza = parseNum(rowRaw['inputplaza1']);
-                        const pAuto = parseNum(rowRaw['percentautolpr1']); 
-                        const pInputMatch = parseNum(rowRaw['percentinputlpr1']);
-                        const pInputPlaza = parseNum(rowRaw['percentinputplaza1']);
-                        const criteriaSum = pAuto + pInputMatch;
-                        extractedData.push({
-                            dateStr: rowRaw['date1'], dateObj,
-                            lpr: { total, auto, pAuto, inputMatch, pInputMatch, inputPlaza, pInputPlaza, criteriaSum, passed: criteriaSum > 90.25 }
-                        });
-                    } else if (type === 'ETC') {
-                        const total = parseNum(rowRaw['total1']);
-                        const auto = parseNum(rowRaw['auto1']);
-                        const inputEntry = parseNum(rowRaw['reserve1']); 
-                        const autoLpr = parseNum(rowRaw['autolpr1']);
-                        const inputLpr = parseNum(rowRaw['inputlpr1']);
-                        const inputPlaza = parseNum(rowRaw['inputplaza1']);
-                        const pAuto = parseNum(rowRaw['percentauto1']);
-                        const pInputEntry = parseNum(rowRaw['percentreserve1']);
-                        const pAutoLpr = parseNum(rowRaw['percentautolpr1']);
-                        const pInputLpr = parseNum(rowRaw['percentinputlpr1']);
-                        const pInputPlaza = parseNum(rowRaw['percentinputplaza1']);
-                        const criteriaSum = 100 - pInputPlaza;
-                        extractedData.push({
-                            dateStr: rowRaw['date1'], dateObj,
-                            etc: { total, auto, pAuto, inputEntry, pInputEntry, autoLpr, pAutoLpr, inputLpr, pInputLpr, inputPlaza, pInputPlaza, criteriaSum, passed: criteriaSum > 98 }
-                        });
-                    } else if (type === 'EntryLPR' || type === 'ExitLPR') {
-                        const total = parseNum(rowRaw['total1']);
-                        const lprH = parseNum(rowRaw['lprh1']);
-                        const lprHPercent = parseNum(rowRaw['lprhpercent1']);
-                        const lprL = parseNum(rowRaw['lprl1']);
-                        const lprLPercent = parseNum(rowRaw['lprlpercent1']);
-                        
-                        const passed = lprHPercent > 95;
+                // Delete Button HTML
+                const deleteBtnHtml = `
+                    <button onclick="handleDelete('${record.id}')" class="${window.innerWidth < 768 ? 'text-slate-400 hover:text-red-500 p-1 bg-white rounded' : 'p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-flex'}" title="ลบเฉพาะในหน้าจอนี้ (ไม่ลบใน Sheet)">
+                        <i data-lucide="trash-2" class="${window.innerWidth < 768 ? 'w-4 h-4' : 'w-[18px] h-[18px]'}"></i>
+                    </button>
+                `;
 
-                        const entryObj = {
-                            total, lprH, lprHPercent, lprL, lprLPercent, passed
+                // 1. Mobile Card HTML
+                const cardHtml = `
+                    <div class="p-4 hover:bg-slate-50 transition-colors">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex flex-col">
+                                <span class="font-semibold text-slate-800">${record.payee}</span>
+                                <span class="text-xs text-slate-500 mt-0.5">${record.date} • ${record.category}</span>
+                            </div>
+                            <div class="text-right flex flex-col items-end">
+                                <span class="font-bold ${amountColorClass}">${sign}฿${amountFormatted}</span>
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-1 ${badgeColorClass}">
+                                    ${record.type}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
+                            <div class="text-xs">
+                                ${statusHtml}
+                            </div>
+                            ${deleteBtnHtml}
+                        </div>
+                    </div>
+                `;
+                mobileCards.insertAdjacentHTML('beforeend', cardHtml);
+
+                // 2. Desktop Row HTML
+                const rowHtml = `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 text-sm whitespace-nowrap">${record.date}</td>
+                        <td class="p-4">
+                            <p class="font-medium text-slate-800">${record.payee}</p>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium mt-1 ${badgeColorClass}">
+                                ${record.type}
+                            </span>
+                        </td>
+                        <td class="p-4 text-sm text-slate-600">${record.category}</td>
+                        <td class="p-4 text-right font-medium ${amountColorClass}">
+                            ${sign}฿${amountFormatted}
+                        </td>
+                        <td class="p-4 text-center text-xs">
+                            ${statusHtml}
+                        </td>
+                        <td class="p-4 text-center">
+                            ${deleteBtnHtml}
+                        </td>
+                    </tr>
+                `;
+                desktopTableBody.insertAdjacentHTML('beforeend', rowHtml);
+            });
+
+            // Re-initialize icons for newly added HTML
+            lucide.createIcons();
+        }
+
+        function updateUI() {
+            updateDashboard();
+            renderRecords();
+        }
+
+        function showError(msg) {
+            if (msg) {
+                errorMsgText.textContent = msg;
+                errorMsgContainer.classList.remove('hidden');
+            } else {
+                errorMsgContainer.classList.add('hidden');
+            }
+        }
+
+        function setProcessingState(processing, statusText = '', previewUrl = null) {
+            isProcessing = processing;
+            fileInput.disabled = processing;
+            
+            if (processing) {
+                uploadDropzone.classList.replace('border-slate-300', 'border-indigo-300');
+                uploadDropzone.classList.add('bg-indigo-50');
+                uploadDefaultUI.classList.add('hidden');
+                uploadProcessingUI.classList.remove('hidden');
+                uploadProcessingUI.classList.add('flex');
+                
+                processStatusText.textContent = statusText;
+                
+                if (previewUrl) {
+                    currentPreviewImg.src = previewUrl;
+                    currentPreviewImg.classList.remove('hidden');
+                } else {
+                    currentPreviewImg.classList.add('hidden');
+                }
+            } else {
+                uploadDropzone.classList.replace('border-indigo-300', 'border-slate-300');
+                uploadDropzone.classList.remove('bg-indigo-50');
+                uploadDefaultUI.classList.remove('hidden');
+                uploadProcessingUI.classList.add('hidden');
+                uploadProcessingUI.classList.remove('flex');
+                fileInput.value = ''; // Reset input
+            }
+        }
+
+        // -----------------------
+        // Event Listeners & Actions
+        // -----------------------
+
+        // Toggle Settings
+        toggleSettingsBtn.addEventListener('click', () => {
+            showSettings = !showSettings;
+            if (showSettings) {
+                settingsPanel.classList.remove('hidden');
+                settingsIcon.setAttribute('data-lucide', 'chevron-up');
+            } else {
+                settingsPanel.classList.add('hidden');
+                settingsIcon.setAttribute('data-lucide', 'chevron-down');
+            }
+            lucide.createIcons();
+        });
+
+        // Update Sheet URL
+        sheetUrlInput.addEventListener('input', (e) => {
+            sheetUrl = e.target.value.trim();
+        });
+
+        // Delete Record
+        window.handleDelete = function(id) {
+            records = records.filter(r => r.id !== id);
+            updateUI();
+        };
+
+        // Manual Form Submit
+        manualForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!formAmount.value || !formPayee.value) {
+                showError('กรุณากรอกข้อมูล ชื่อรายการและจำนวนเงิน ให้ครบถ้วน');
+                return;
+            }
+
+            const newRecord = {
+                id: Date.now().toString(),
+                date: formDate.value,
+                type: formType.value,
+                category: formCategory.value,
+                payee: formPayee.value,
+                amount: Number(formAmount.value),
+                syncStatus: 'syncing'
+            };
+
+            // Add to UI immediately
+            records = [newRecord, ...records];
+            showError('');
+            updateUI();
+            
+            // Reset form fields
+            formDate.value = new Date().toISOString().split('T')[0];
+            formPayee.value = '';
+            formAmount.value = '';
+            formType.value = 'รายจ่าย';
+            formCategory.value = 'อาหาร';
+
+            // Sync
+            const syncResult = await syncToGoogleSheet(newRecord);
+            updateRecordStatus(newRecord.id, syncResult);
+        });
+
+        // Update Sync Status in state and re-render
+        function updateRecordStatus(id, result) {
+            const index = records.findIndex(r => r.id === id);
+            if (index !== -1) {
+                let finalStatus = 'local';
+                if (result === 'success') finalStatus = 'synced';
+                if (result === 'error') finalStatus = 'failed';
+                
+                records[index].syncStatus = finalStatus;
+                updateUI();
+            }
+        }
+
+        // File Upload Change
+        fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            showError('');
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const previewUrl = URL.createObjectURL(file);
+                setProcessingState(true, `กำลังอ่านภาพที่ ${i + 1}/${files.length}...`, previewUrl);
+
+                try {
+                    // Convert to Base64
+                    const base64String = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                        reader.readAsDataURL(file);
+                    });
+
+                    // Call Gemini API
+                    const extractedData = await processImageWithGemini(base64String, file.type);
+                    
+                    if (extractedData) {
+                        const newRecord = {
+                            id: Date.now().toString() + i,
+                            date: extractedData.date || new Date().toISOString().split('T')[0],
+                            payee: extractedData.payee || 'ไม่ระบุชื่อ',
+                            amount: Number(extractedData.amount) || 0,
+                            type: extractedData.type === 'รายรับ' ? 'รายรับ' : 'รายจ่าย',
+                            category: extractedData.category || 'อื่นๆ',
+                            syncStatus: 'syncing'
                         };
 
-                        if(type === 'EntryLPR') {
-                             extractedData.push({ dateStr: rowRaw['date1'], dateObj, entryLpr: entryObj });
-                        } else {
-                             extractedData.push({ dateStr: rowRaw['date1'], dateObj, exitLpr: entryObj });
-                        }
+                        // Add to table
+                        records = [newRecord, ...records];
+                        updateUI();
+
+                        // Sync to Sheet
+                        const syncResult = await syncToGoogleSheet(newRecord);
+                        updateRecordStatus(newRecord.id, syncResult);
                     }
+                } catch (err) {
+                    console.error(`Error processing file ${i+1}:`, err);
+                    showError(`ภาพที่ ${i + 1} อ่านไม่สำเร็จ โปรดตรวจสอบไฟล์`);
                 }
             }
-            return extractedData;
-        }
 
-        // --- SINGLE DAY INITIAL DATA WITH MOCK FOR OTHER DAYS ---
-        function getInitialData() {
-            const data = [];
-            const startDate = new Date(2026, 0, 6); // 6 Jan 2026
-            const endDate = new Date(2026, 0, 20);  // 20 Jan 2026
+            setProcessingState(false);
+        });
 
-            // Base Data Day 1 (Confirmed)
-            const day1LPR = {
-                total: 127473, auto: 119257, pAuto: 93.55, inputMatch: 2412, pInputMatch: 1.89, inputPlaza: 5804, pInputPlaza: 4.55
-            };
-            const day1ETC = {
-                total: 93728, auto: 89129, pAuto: 95.09, inputEntry: 713, pInputEntry: 0.76, autoLpr: 84, pAutoLpr: 0.09,
-                inputLpr: 3569, pInputLpr: 3.81, inputPlaza: 233, pInputPlaza: 0.25
-            };
-            const day1Entry = {
-                total: 235541, lprH: 228303, lprHPercent: 96.93, lprL: 7238, lprLPercent: 3.07
-            };
-            const day1Exit = {
-                total: 239478, lprH: 233956, lprHPercent: 97.69, lprL: 5522, lprLPercent: 2.31
-            };
+        // -----------------------
+        // API Integrations
+        // -----------------------
 
-            let currentDate = new Date(startDate);
-            while (currentDate <= endDate) {
-                const dayStr = String(currentDate.getDate()).padStart(2, '0');
-                const monthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
-                const yearBE = currentDate.getFullYear() + 543;
-                const dateStr = `${dayStr}/${monthStr}/${yearBE}`;
-                
-                const isDay1 = currentDate.getDate() === 6 && currentDate.getMonth() === 0;
-                // Use Day 1 data exactly, randomize slightly for others
-                const variance = isDay1 ? 0 : (Math.random() - 0.5) * 0.05; 
-
-                // Generate consistent mock data
-                const lprTotal = Math.round(day1LPR.total * (1 + variance));
-                const etcTotal = Math.round(day1ETC.total * (1 + variance));
-                const entryTotal = Math.round(day1Entry.total * (1 + variance));
-                const exitTotal = Math.round(day1Exit.total * (1 + variance));
-
-                data.push({
-                    id: dateStr,
-                    date: dateStr,
-                    jsDate: new Date(currentDate),
-                    etc: {
-                        total: etcTotal,
-                        auto: Math.round(etcTotal * (day1ETC.pAuto/100)), pAuto: day1ETC.pAuto,
-                        inputEntry: Math.round(etcTotal * (day1ETC.pInputEntry/100)), pInputEntry: day1ETC.pInputEntry,
-                        autoLpr: Math.round(etcTotal * (day1ETC.pAutoLpr/100)), pAutoLpr: day1ETC.pAutoLpr,
-                        inputLpr: Math.round(etcTotal * (day1ETC.pInputLpr/100)), pInputLpr: day1ETC.pInputLpr,
-                        inputPlaza: Math.round(etcTotal * (day1ETC.pInputPlaza/100)), pInputPlaza: day1ETC.pInputPlaza,
-                        criteriaSum: (day1ETC.pAuto + day1ETC.pInputEntry + day1ETC.pAutoLpr + day1ETC.pInputLpr), 
-                        passed: true
-                    },
-                    lpr: {
-                        total: lprTotal,
-                        auto: Math.round(lprTotal * (day1LPR.pAuto/100)), pAuto: day1LPR.pAuto,
-                        inputMatch: Math.round(lprTotal * (day1LPR.pInputMatch/100)), pInputMatch: day1LPR.pInputMatch,
-                        inputPlaza: Math.round(lprTotal * (day1LPR.pInputPlaza/100)), pInputPlaza: day1LPR.pInputPlaza,
-                        criteriaSum: (day1LPR.pAuto + day1LPR.pInputMatch),
-                        passed: true
-                    },
-                    entryLpr: {
-                        total: entryTotal,
-                        lprH: Math.round(entryTotal * (day1Entry.lprHPercent/100)), lprHPercent: day1Entry.lprHPercent,
-                        lprL: Math.round(entryTotal * (day1Entry.lprLPercent/100)), lprLPercent: day1Entry.lprLPercent,
-                        passed: true
-                    },
-                    exitLpr: {
-                        total: exitTotal,
-                        lprH: Math.round(exitTotal * (day1Exit.lprHPercent/100)), lprHPercent: day1Exit.lprHPercent,
-                        lprL: Math.round(exitTotal * (day1Exit.lprLPercent/100)), lprLPercent: day1Exit.lprLPercent,
-                        passed: true
-                    }
+        async function syncToGoogleSheet(record) {
+            if (!sheetUrl) return 'no-url'; 
+            
+            try {
+                await fetch(sheetUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: record.date,
+                        type: record.type,
+                        category: record.category,
+                        payee: record.payee,
+                        amount: record.amount
+                    })
                 });
-                currentDate.setDate(currentDate.getDate() + 1);
+                return 'success';
+            } catch (err) {
+                console.error("Failed to sync to Google Sheet", err);
+                return 'error';
             }
-            return data;
         }
 
-        // --- COMPONENTS ---
-        function StatCard({ title, value, subValue, icon: Icon, colorClass, bgClass }) {
-            return (
-                <div className={`p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow ${bgClass || 'bg-white'}`}>
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-xs font-medium text-slate-500 mb-1 truncate">{title}</p>
-                            <h3 className="text-xl font-bold text-slate-800">{value}</h3>
-                            {subValue && <p className={`text-xs mt-1 font-medium ${colorClass}`}>{subValue}</p>}
-                        </div>
-                        <div className={`p-2 rounded-lg ${colorClass.replace('text-', 'bg-').replace('600', '100').replace('700', '100').replace('500','100').replace('orange', 'orange')}`}>
-                            <Icon className={`w-5 h-5 ${colorClass}`} />
-                        </div>
-                    </div>
-                </div>
-            );
-        }
+        async function processImageWithGemini(base64Data, mimeType) {
+            const apiKey = ""; // API Key ฉีดอัตโนมัติจากระบบ
+            
+            const prompt = `
+                คุณคือผู้เชี่ยวชาญด้านบัญชี กรุณาวิเคราะห์ภาพสลิปโอนเงินธนาคารหรือใบเสร็จรับเงินนี้ 
+                และสกัดข้อมูลออกมาเป็น JSON ตามโครงสร้างที่กำหนดให้
+                หากเป็นสลิปโอนเงินออก ให้ถือเป็น 'รายจ่าย' 
+                หากเป็นสลิปโอนเงินเข้า ให้ถือเป็น 'รายรับ'
+            `;
 
-        function StatusBadge({ passed }) {
-            return (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${passed ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                    {passed ? <IconCheck className="w-3 h-3" /> : <IconX className="w-3 h-3" />}
-                    {passed ? 'Pass' : 'Fail'}
-                </span>
-            );
-        }
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: mimeType, data: base64Data } }
+                        ]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                date: { type: "STRING" },
+                                payee: { type: "STRING" },
+                                amount: { type: "NUMBER" },
+                                type: { type: "STRING" },
+                                category: { type: "STRING" }
+                            },
+                            required: ["date", "payee", "amount", "type", "category"]
+                        }
+                    }
+                })
+            });
 
-        function CustomRechartsTooltip({ active, payload, label }) {
-            if (active && payload && payload.length) {
-                return (
-                    <div className="bg-white p-3 border border-slate-200 shadow-lg rounded-lg text-xs z-50">
-                        <p className="font-bold text-slate-700 mb-1">{label}</p>
-                        {payload.map((entry, index) => (
-                            <div key={index} className="flex items-center gap-2 mb-0.5">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                <span className="text-slate-600">{entry.name}:</span>
-                                <span className="font-semibold ml-1">
-                                    {entry.name.includes('%') || entry.name.includes('Score') 
-                                        ? `${Number(entry.value).toFixed(2)}%` 
-                                        : Number(entry.value).toLocaleString()}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                );
+            const result = await response.json();
+            if (result.error) throw new Error(result.error.message);
+
+            const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (textResponse) {
+                return JSON.parse(textResponse);
             }
             return null;
         }
 
-        // Mobile Card View for Tables
-        function MobileTableRowCard({ row, type }) {
-             // For LPR Tab
-             if (type === 'lpr') {
-                 const item = row.lpr;
-                 if (!item) return null;
-                 return (
-                    <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 mb-3 text-sm">
-                        <div className="flex justify-between items-center mb-2 border-b pb-2">
-                            <span className="font-bold text-slate-700">{row.date}</span>
-                            <StatusBadge passed={item.passed} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="text-slate-500">Total:</div>
-                            <div className="text-right font-mono">{item.total.toLocaleString()}</div>
-                            
-                            <div className="text-purple-600 font-medium">Auto:</div>
-                            <div className="text-right font-mono">{item.auto.toLocaleString()} ({item.pAuto.toFixed(2)}%)</div>
-                            
-                            <div className="text-teal-600 font-medium">Input LPR:</div>
-                            <div className="text-right font-mono">{item.inputMatch.toLocaleString()} ({item.pInputMatch.toFixed(2)}%)</div>
-                            
-                            <div className="text-amber-600 font-medium">Plaza:</div>
-                            <div className="text-right font-mono">{item.inputPlaza.toLocaleString()} ({item.pInputPlaza.toFixed(2)}%)</div>
-                            
-                            <div className="text-slate-800 font-bold pt-1">KPI Score:</div>
-                            <div className="text-right font-bold text-slate-800 pt-1">{item.criteriaSum.toFixed(2)}%</div>
-                        </div>
-                    </div>
-                 );
-             }
-             // For ETC Tab
-             if (type === 'etc') {
-                const item = row.etc;
-                if (!item) return null;
-                return (
-                   <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 mb-3 text-sm">
-                       <div className="flex justify-between items-center mb-2 border-b pb-2">
-                           <span className="font-bold text-slate-700">{row.date}</span>
-                           <StatusBadge passed={item.passed} />
-                       </div>
-                       <div className="grid grid-cols-2 gap-y-1 gap-x-2">
-                           <div className="text-slate-500">Total:</div>
-                           <div className="text-right font-mono">{item.total.toLocaleString()}</div>
-                           
-                           <div className="text-blue-600">Auto:</div>
-                           <div className="text-right font-mono">{item.auto.toLocaleString()} ({item.pAuto.toFixed(2)}%)</div>
-
-                           <div className="text-emerald-600">Handheld:</div>
-                           <div className="text-right font-mono">{item.inputEntry.toLocaleString()} ({item.pInputEntry.toFixed(2)}%)</div>
-
-                           <div className="text-orange-600">Auto LPR:</div>
-                           <div className="text-right font-mono">{item.autoLpr.toLocaleString()} ({item.pAutoLpr.toFixed(2)}%)</div>
-                           
-                           <div className="text-indigo-600">In. LPR:</div>
-                           <div className="text-right font-mono">{item.inputLpr.toLocaleString()} ({item.pInputLpr.toFixed(2)}%)</div>
-
-                           <div className="text-gray-600">In. Plaza:</div>
-                           <div className="text-right font-mono">{item.inputPlaza.toLocaleString()} ({item.pInputPlaza.toFixed(2)}%)</div>
-                           
-                           <div className="text-slate-800 font-bold pt-1 border-t mt-1">KPI:</div>
-                           <div className="text-right font-bold text-slate-800 pt-1 border-t mt-1">{item.criteriaSum.toFixed(2)}%</div>
-                       </div>
-                   </div>
-                );
-             }
-             // For Entry/Exit Tabs
-             if (type === 'entry' || type === 'exit') {
-                 const item = row[`${type}Lpr`];
-                 if (!item) return null;
-                 const isEntry = type === 'entry';
-                 return (
-                    <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 mb-3 text-sm">
-                        <div className="flex justify-between items-center mb-2 border-b pb-2">
-                            <span className="font-bold text-slate-700">{row.date}</span>
-                            <StatusBadge passed={item.passed} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div className="text-slate-500">Total:</div>
-                            <div className="text-right font-mono">{item.total.toLocaleString()}</div>
-                            
-                            <div className={isEntry ? "text-emerald-600" : "text-emerald-600"}>&gt; 95%:</div>
-                            <div className="text-right font-mono text-emerald-700">{item.lprH.toLocaleString()} ({item.lprHPercent.toFixed(2)}%)</div>
-                            
-                            <div className="text-rose-600">&lt; 95%:</div>
-                            <div className="text-right font-mono text-rose-700">{item.lprL.toLocaleString()} ({item.lprLPercent.toFixed(2)}%)</div>
-                        </div>
-                    </div>
-                 );
-             }
-             return null;
-        }
-
-        function Dashboard() {
-            const [activeTab, setActiveTab] = useState('overview');
-            const [dateRange, setDateRange] = useState({ start: '', end: '' });
-            const [data, setData] = useState([]);
-            const [etcRaw, setEtcRaw] = useState(null);
-            const [lprRaw, setLprRaw] = useState(null);
-            const [entryLprRaw, setEntryLprRaw] = useState(null);
-            const [exitLprRaw, setExitLprRaw] = useState(null);
-            const [isUsingRealData, setIsUsingRealData] = useState(false);
-            const [rechartsLoaded, setRechartsLoaded] = useState(false);
-            const [autoFetchStatus, setAutoFetchStatus] = useState('idle');
-            const [isMobile, setIsMobile] = useState(false);
-            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-            useEffect(() => {
-                if (window.Recharts) setRechartsLoaded(true);
-                setData(getInitialData()); // Initialize with mock data to show full table
-
-                const checkMobile = () => setIsMobile(window.innerWidth < 768);
-                checkMobile();
-                window.addEventListener('resize', checkMobile);
-
-                // AUTO-FETCH LOGIC
-                const tryAutoFetch = async () => {
-                    setAutoFetchStatus('loading');
-                    try {
-                        const baseUrl = "https://raw.githubusercontent.com/satsawat00-code/satsawat_Dashboard/main/Data/";
-                        const timestamp = new Date().getTime(); 
-                        
-                        const fileConfigs = [
-                            { url: baseUrl + "LPR%20Matching.xml?t=" + timestamp, type: 'LPR' },
-                            { url: baseUrl + "ETC%20Matching.xml?t=" + timestamp, type: 'ETC' },
-                            { url: baseUrl + "Entry_LPR.xml?t=" + timestamp, type: 'EntryLPR' },
-                            { url: baseUrl + "Exit_LPR.xml?t=" + timestamp, type: 'ExitLPR' }
-                        ];
-
-                        const results = await Promise.allSettled(
-                            fileConfigs.map(async (config) => {
-                                const response = await fetch(config.url);
-                                if (!response.ok) throw new Error(`HTTP error ${response.status} for ${config.url}`);
-                                const text = await response.text();
-                                return { type: config.type, data: parseXMLData(text, config.type) };
-                            })
-                        );
-
-                        let loadedAny = false;
-                        results.forEach(res => {
-                            if (res.status === 'fulfilled') {
-                                const { type, data } = res.value;
-                                if (data && data.length > 0) {
-                                    loadedAny = true;
-                                    if (type === 'LPR') setLprRaw(data);
-                                    if (type === 'ETC') setEtcRaw(data);
-                                    if (type === 'EntryLPR') setEntryLprRaw(data);
-                                    if (type === 'ExitLPR') setExitLprRaw(data);
-                                }
-                            }
-                        });
-
-                        if (loadedAny) {
-                            setAutoFetchStatus('success');
-                            setIsUsingRealData(true); 
-                        } else {
-                            setAutoFetchStatus('error');
-                        }
-
-                    } catch (err) {
-                        console.error("Auto fetch failed:", err);
-                        setAutoFetchStatus('error');
-                    }
-                };
-                
-                tryAutoFetch();
-                return () => window.removeEventListener('resize', checkMobile);
-            }, []);
-
-            const { 
-                LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
-                AreaChart, Area, ReferenceLine, ComposedChart, Rectangle 
-            } = window.Recharts || {};
-
-            const handleFileUpload = (event, type) => {
-                const file = event.target.files[0];
-                if (!file) return;
-                event.target.value = ''; 
-                
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const text = e.target.result;
-                        const parsed = parseXMLData(text, type);
-                        if (parsed.length === 0) return;
-
-                        if (type === 'ETC') { setEtcRaw(parsed); alert(`อัปโหลด ETC สำเร็จ: พบ ${parsed.length} รายการ`); }
-                        if (type === 'LPR') { setLprRaw(parsed); alert(`อัปโหลด LPR สำเร็จ: พบ ${parsed.length} รายการ`); }
-                        if (type === 'EntryLPR') { setEntryLprRaw(parsed); alert(`อัปโหลด Entry LPR สำเร็จ: พบ ${parsed.length} รายการ`); }
-                        if (type === 'ExitLPR') { setExitLprRaw(parsed); alert(`อัปโหลด Exit LPR สำเร็จ: พบ ${parsed.length} รายการ`); }
-                        setIsUsingRealData(true);
-                    } catch (err) {
-                        console.error(err);
-                        alert("เกิดข้อผิดพลาดในการอ่านไฟล์: " + err.message);
-                    }
-                };
-                reader.readAsText(file);
-            };
-
-            // Merge Logic
-            useEffect(() => {
-                if (isUsingRealData && (etcRaw || lprRaw || entryLprRaw || exitLprRaw)) {
-                    const mergedMap = new Map();
-                    const allDates = new Set();
-                    if (etcRaw) etcRaw.forEach(i => allDates.add(i.dateStr));
-                    if (lprRaw) lprRaw.forEach(i => allDates.add(i.dateStr));
-                    if (entryLprRaw) entryLprRaw.forEach(i => allDates.add(i.dateStr));
-                    if (exitLprRaw) exitLprRaw.forEach(i => allDates.add(i.dateStr));
-
-                    allDates.forEach(dStr => mergedMap.set(dStr, { dateStr: dStr, etc: null, lpr: null, entryLpr: null, exitLpr: null }));
-
-                    const mergeData = (rawData, key) => {
-                        if (rawData) {
-                            rawData.forEach(item => {
-                                const existing = mergedMap.get(item.dateStr) || { dateStr: item.dateStr };
-                                mergedMap.set(item.dateStr, { ...existing, [key]: item[key], jsDate: item.dateObj });
-                            });
-                        }
-                    };
-
-                    mergeData(etcRaw, 'etc');
-                    mergeData(lprRaw, 'lpr');
-                    mergeData(entryLprRaw, 'entryLpr');
-                    mergeData(exitLprRaw, 'exitLpr');
-
-                    const mergedArray = Array.from(mergedMap.values())
-                        .map((item, index) => ({
-                            id: index,
-                            date: item.dateStr,
-                            jsDate: item.jsDate || parseThaiDate(item.dateStr),
-                            etc: item.etc || { total: 0, auto: 0, pAuto: 0, inputEntry: 0, pInputEntry: 0, autoLpr: 0, pAutoLpr: 0, inputLpr: 0, pInputLpr: 0, inputPlaza: 0, pInputPlaza: 0, criteriaSum: 0, passed: false },
-                            lpr: item.lpr || { total: 0, auto: 0, pAuto: 0, inputMatch: 0, pInputMatch: 0, inputPlaza: 0, pInputPlaza: 0, criteriaSum: 0, passed: false },
-                            entryLpr: item.entryLpr || { total: 0, lprH: 0, lprHPercent: 0, lprL: 0, lprLPercent: 0, passed: false },
-                            exitLpr: item.exitLpr || { total: 0, lprH: 0, lprHPercent: 0, lprL: 0, lprLPercent: 0, passed: false }
-                        }))
-                        .sort((a, b) => (a.jsDate && b.jsDate) ? a.jsDate - b.jsDate : 0);
-
-                    if (mergedArray.length > 0) {
-                        setData(mergedArray);
-                    }
-                }
-            }, [etcRaw, lprRaw, entryLprRaw, exitLprRaw, isUsingRealData]);
-
-            const filteredData = useMemo(() => {
-                if (!dateRange.start && !dateRange.end) return data;
-                
-                const start = dateRange.start ? parseInputDate(dateRange.start) : new Date(0);
-                const end = dateRange.end ? parseInputDate(dateRange.end) : new Date(9999, 11, 31);
-                end.setHours(23, 59, 59, 999);
-
-                return data.filter(item => {
-                    if (!item.jsDate) return false;
-                    return item.jsDate >= start && item.jsDate <= end;
-                });
-            }, [dateRange, data]);
-
-            const stats = useMemo(() => {
-                if (filteredData.length === 0) return null;
-                const totalEtc = filteredData.reduce((acc, curr) => acc + (curr.etc?.total || 0), 0);
-                const totalLpr = filteredData.reduce((acc, curr) => acc + (curr.lpr?.total || 0), 0);
-                
-                const lprSumAuto = filteredData.reduce((acc, curr) => acc + (curr.lpr?.auto || 0), 0);
-                const lprSumInputMatch = filteredData.reduce((acc, curr) => acc + (curr.lpr?.inputMatch || 0), 0);
-                const lprSumInputPlaza = filteredData.reduce((acc, curr) => acc + (curr.lpr?.inputPlaza || 0), 0);
-                
-                const etcSumAuto = filteredData.reduce((acc, curr) => acc + (curr.etc?.auto || 0), 0);
-                const etcSumInputEntry = filteredData.reduce((acc, curr) => acc + (curr.etc?.inputEntry || 0), 0);
-                const etcSumAutoLpr = filteredData.reduce((acc, curr) => acc + (curr.etc?.autoLpr || 0), 0);
-                const etcSumInputLpr = filteredData.reduce((acc, curr) => acc + (curr.etc?.inputLpr || 0), 0);
-                const etcSumInputPlaza = filteredData.reduce((acc, curr) => acc + (curr.etc?.inputPlaza || 0), 0);
-
-                const lprGlobalPAuto = totalLpr ? (lprSumAuto / totalLpr) * 100 : 0;
-                const lprGlobalPInputMatch = totalLpr ? (lprSumInputMatch / totalLpr) * 100 : 0;
-                const lprGlobalPInputPlaza = totalLpr ? (lprSumInputPlaza / totalLpr) * 100 : 0;
-                const lprGlobalCriteria = lprGlobalPAuto + lprGlobalPInputMatch;
-
-                const etcGlobalPAuto = totalEtc ? (etcSumAuto / totalEtc) * 100 : 0;
-                const etcGlobalPInputEntry = totalEtc ? (etcSumInputEntry / totalEtc) * 100 : 0;
-                const etcGlobalPAutoLpr = totalEtc ? (etcSumAutoLpr / totalEtc) * 100 : 0;
-                const etcGlobalPInputLpr = totalEtc ? (etcSumInputLpr / totalEtc) * 100 : 0;
-                const etcGlobalPInputPlaza = totalEtc ? (etcSumInputPlaza / totalEtc) * 100 : 0;
-                const etcGlobalCriteria = etcGlobalPAuto + etcGlobalPInputEntry + etcGlobalPAutoLpr + etcGlobalPInputLpr;
-
-                // Entry & Exit Stats
-                const totalEntry = filteredData.reduce((acc, curr) => acc + (curr.entryLpr?.total || 0), 0);
-                const totalExit = filteredData.reduce((acc, curr) => acc + (curr.exitLpr?.total || 0), 0);
-                const entryH = filteredData.reduce((acc, curr) => acc + (curr.entryLpr?.lprH || 0), 0);
-                const entryL = filteredData.reduce((acc, curr) => acc + (curr.entryLpr?.lprL || 0), 0);
-                const exitH = filteredData.reduce((acc, curr) => acc + (curr.exitLpr?.lprH || 0), 0);
-                const exitL = filteredData.reduce((acc, curr) => acc + (curr.exitLpr?.lprL || 0), 0);
-
-                const entryHPercent = totalEntry ? (entryH / totalEntry) * 100 : 0;
-                const entryLPercent = totalEntry ? (entryL / totalEntry) * 100 : 0;
-                const exitHPercent = totalExit ? (exitH / totalExit) * 100 : 0;
-                const exitLPercent = totalExit ? (exitL / totalExit) * 100 : 0;
-
-                return {
-                    totalEtc, totalLpr,
-                    avgEtcCriteria: etcGlobalCriteria.toFixed(2),
-                    avgLprCriteria: lprGlobalCriteria.toFixed(2),
-                    lpr: { total: totalLpr, auto: lprSumAuto, pAuto: lprGlobalPAuto, inputMatch: lprSumInputMatch, pInputMatch: lprGlobalPInputMatch, inputPlaza: lprSumInputPlaza, pInputPlaza: lprGlobalPInputPlaza },
-                    etc: { total: totalEtc, auto: etcSumAuto, pAuto: etcGlobalPAuto, inputEntry: etcSumInputEntry, pInputEntry: etcGlobalPInputEntry, autoLpr: etcSumAutoLpr, pAutoLpr: etcGlobalPAutoLpr, inputLpr: etcSumInputLpr, pInputLpr: etcGlobalPInputLpr, inputPlaza: etcSumInputPlaza, pInputPlaza: etcGlobalPInputPlaza },
-                    entryLpr: { total: totalEntry, lprH: entryH, lprHPercent: entryHPercent, lprL: entryL, lprLPercent: entryLPercent },
-                    exitLpr: { total: totalExit, lprH: exitH, lprHPercent: exitHPercent, lprL: exitL, lprLPercent: exitLPercent }
-                };
-            }, [filteredData]);
-
-            const comparisonData = filteredData.map(d => ({ date: d.date, 'ETC Total': d.etc.total, 'LPR Total': d.lpr.total }));
-            const accuracyData = filteredData.map(d => ({ date: d.date, 'Entry LPR (%)': d.entryLpr?.lprHPercent || 0, 'Exit LPR (%)': d.exitLpr?.lprHPercent || 0 }));
-            const criteriaData = filteredData.map(d => ({ date: d.date, 'ETC KPI %': parseFloat(d.etc.criteriaSum.toFixed(2)), 'LPR KPI %': parseFloat(d.lpr.criteriaSum.toFixed(2)) }));
-
-            if (!rechartsLoaded) return <div className="flex items-center justify-center min-h-screen"><div className="text-xl font-bold text-blue-600">Loading Dashboard...</div></div>;
-
-            return (
-                <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-20">
-                    {/* Top Bar */}
-                    <div className="bg-slate-800 text-white px-6 py-3 text-sm shadow-md">
-                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <span className={`w-3 h-3 rounded-full shadow-lg ${isUsingRealData ? 'bg-green-400' : (autoFetchStatus === 'loading' ? 'bg-blue-400 animate-bounce' : 'bg-yellow-400 animate-pulse')}`}></span>
-                                <span className="font-medium tracking-wide">
-                                    {autoFetchStatus === 'loading' ? 'กำลังค้นหาไฟล์ข้อมูลจาก GitHub...' :
-                                     isUsingRealData ? 'โหมดข้อมูลจริง (Real Data Active)' : 'โหมดรอข้อมูล'}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-4 flex-wrap">
-                                {/* Swapped Order: LPR First, then ETC */}
-                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-purple-400 hover:text-purple-300">
-                                    <IconGithub className="w-4 h-4 text-purple-300" />
-                                    <span className="font-medium">Override LPR</span>
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'LPR')} className="hidden" />
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-blue-400 hover:text-blue-300">
-                                    <IconGithub className="w-4 h-4 text-blue-300" />
-                                    <span className="font-medium">Override ETC</span>
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ETC')} className="hidden" />
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-emerald-400 hover:text-emerald-300">
-                                    <IconGithub className="w-4 h-4 text-emerald-300" />
-                                    <span className="font-medium">Override Entry</span>
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'EntryLPR')} className="hidden" />
-                                </label>
-                                <label className="flex items-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-md transition-all border border-slate-600 hover:border-pink-400 hover:text-pink-300">
-                                    <IconGithub className="w-4 h-4 text-pink-300" />
-                                    <span className="font-medium">Override Exit</span>
-                                    <input type="file" accept=".xml" onClick={(e) => (e.target.value = null)} onChange={(e) => handleFileUpload(e, 'ExitLPR')} className="hidden" />
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Navbar */}
-                    <nav className="bg-white border-b border-slate-200 px-6 py-4 sticky top-0 z-10 shadow-sm/50 backdrop-blur-sm bg-white/90">
-                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-lg shadow-blue-200">
-                                    <IconActivity className="text-white w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Matching Dashboard</h1>
-                                    <p className="text-xs font-medium text-slate-500 mt-0.5">ระบบรายงานสถิติ LPR และ ETC ประจำวัน</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center bg-slate-100/80 p-1.5 rounded-xl border border-slate-200 overflow-x-auto">
-                                {['overview', 'lpr', 'etc', 'entry', 'exit'].map((tab) => (
-                                    <button
-                                        key={tab}
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${
-                                            activeTab === tab 
-                                                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5' 
-                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-                                        }`}
-                                    >
-                                        {tab === 'overview' && 'ภาพรวม (Overview)'}
-                                        {tab === 'lpr' && 'LPR Matching'}
-                                        {tab === 'etc' && 'ETC Matching'}
-                                        {tab === 'entry' && 'Entry LPR'}
-                                        {tab === 'exit' && 'Exit LPR'}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </nav>
-
-                    {/* Main Content */}
-                    <main className="max-w-7xl mx-auto px-6 py-8">
-                        
-                        {autoFetchStatus === 'error' && (
-                            <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-800">
-                                <IconInfo className="w-5 h-5 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="font-semibold">ไม่สามารถดึงข้อมูลอัตโนมัติจาก GitHub ได้</p>
-                                    <p className="text-sm mt-1 opacity-90">ระบบไม่สามารถเข้าถึงไฟล์ข้อมูลจาก GitHub Repository ได้โดยตรง อาจเป็นเพราะปัญหา CORS หรือ Path ไม่ถูกต้อง กรุณาใช้ปุ่ม <strong>Override</strong> ด้านบนเพื่ออัปโหลดไฟล์ด้วยตัวเอง</p>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {autoFetchStatus === 'success' && (
-                            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3 text-green-800">
-                                <IconCheck className="w-5 h-5 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="font-semibold">ดึงข้อมูลสำเร็จ</p>
-                                    <p className="text-sm mt-1 opacity-90">ข้อมูลล่าสุดถูกโหลดมาจาก GitHub เรียบร้อยแล้ว</p>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-8 flex flex-wrap items-center gap-6">
-                            <div className="flex items-center gap-2 text-slate-700 font-semibold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-                                <IconFilter className="w-4 h-4 text-slate-500" />
-                                <span>ตัวกรอง:</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm font-medium text-slate-500">จากวันที่:</span>
-                                <input type="date" className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} />
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm font-medium text-slate-500">ถึงวันที่:</span>
-                                <input type="date" className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} />
-                            </div>
-                            <button onClick={() => setDateRange({ start: '', end: '' })} className="text-sm font-medium text-slate-500 hover:text-blue-600 px-3 py-1.5 rounded-lg ml-auto">ล้างค่าตัวกรอง</button>
-                        </div>
-
-                        {!stats ? (
-                            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-                                <IconFileText className="w-8 h-8 text-slate-400 mb-4" />
-                                <p className="text-slate-600 font-medium">ไม่พบข้อมูลตามช่วงวันที่เลือก</p>
-                            </div>
-                        ) : (
-                            <>
-                                {activeTab === 'overview' && (
-                                    <div className="space-y-8 animate-in fade-in duration-500">
-                                        <div className="space-y-4">
-                                            <div className="flex items-center gap-3"><div className="h-8 w-1 bg-purple-600 rounded-full"></div><h3 className="text-lg font-bold text-purple-700">LPR Matching Overview</h3></div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <StatCard title="Total LPR Transaction" value={stats.totalLpr.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-blue-600" bgClass="bg-white border-purple-100" />
-                                                <StatCard title="Avg LPR KPI Score" value={`${stats.avgLprCriteria}%`} subValue="Target > 90.25%" icon={IconCheckCircle} colorClass="text-blue-600" bgClass="bg-white border-purple-100" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4 pt-6 border-t border-slate-200">
-                                            <div className="flex items-center gap-3"><div className="h-8 w-1 bg-orange-600 rounded-full"></div><h3 className="text-lg font-bold text-orange-700">ETC Matching Overview</h3></div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <StatCard title="Total ETC Transaction" value={stats.totalEtc.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-orange-600" bgClass="bg-white border-orange-100" />
-                                                {/* Corrected: Avg ETC KPI Score in Orange */}
-                                                <StatCard title="Avg ETC KPI Score" value={`${stats.avgEtcCriteria}%`} subValue="Target > 98%" icon={IconCheckCircle} colorClass="text-orange-600" bgClass="bg-white border-orange-100" />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><IconBarChart3 className="w-5 h-5 text-slate-400" />ปริมาณจราจร</h3>
-                                                <div className="h-80"><ResponsiveContainer width="100%" height="100%"><AreaChart data={comparisonData}><defs><linearGradient id="colorEtc" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#ea580c" stopOpacity={0.1}/><stop offset="95%" stopColor="#ea580c" stopOpacity={0}/></linearGradient><linearGradient id="colorLpr" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis tickFormatter={(value) => `${value / 1000}k`} tick={{fontSize: 12, fill: '#94a3b8'}} stroke="#94a3b8" tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><Area type="monotone" dataKey="ETC Total" stroke="#ea580c" fillOpacity={1} fill="url(#colorEtc)" strokeWidth={2} /><Area type="monotone" dataKey="LPR Total" stroke="#2563eb" fillOpacity={1} fill="url(#colorLpr)" strokeWidth={2} /></AreaChart></ResponsiveContainer></div>
-                                            </div>
-                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                                <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><IconActivity className="w-5 h-5 text-slate-400" />แนวโน้ม KPI</h3>
-                                                <div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={criteriaData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis domain={[80, 100]} tick={{fontSize: 12, fill: '#94a3b8'}} stroke="#94a3b8" unit="%" tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><ReferenceLine y={98} stroke="#ea580c" strokeDasharray="3 3" label={{ value: 'Target 98%', position: 'insideTopLeft', fill: '#ea580c', fontSize: 12 }} /><ReferenceLine y={90.25} stroke="#2563eb" strokeDasharray="3 3" label={{ value: 'Target 90.25%', position: 'insideBottomLeft', fill: '#2563eb', fontSize: 12 }} /><Line type="monotone" dataKey="ETC KPI %" stroke="#ea580c" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /><Line type="monotone" dataKey="LPR KPI %" stroke="#2563eb" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /></LineChart></ResponsiveContainer></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Moved Entry & Exit Overview Section Below Graph */}
-                                        <div className="space-y-4 pt-6 border-t border-slate-200">
-                                            <div className="flex items-center gap-3"><div className="h-8 w-1 bg-teal-600 rounded-full"></div><h3 className="text-lg font-bold text-teal-700">Entry & Exit LPR Overview</h3></div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                                <StatCard title="Entry LPR Total" value={stats.entryLpr.total.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-emerald-600" bgClass="bg-white border-emerald-100" />
-                                                <StatCard title="Entry Accuracy" value={`${stats.entryLpr.lprHPercent.toFixed(2)}%`} subValue="Target > 95%" icon={IconCheckCircle} colorClass="text-emerald-600" bgClass="bg-white border-emerald-100" />
-                                                <StatCard title="Exit LPR Total" value={stats.exitLpr.total.toLocaleString()} subValue="ปริมาณจราจร" icon={IconActivity} colorClass="text-pink-600" bgClass="bg-white border-pink-100" />
-                                                <StatCard title="Exit Accuracy" value={`${stats.exitLpr.lprHPercent.toFixed(2)}%`} subValue="Target > 95%" icon={IconCheckCircle} colorClass="text-pink-600" bgClass="bg-white border-pink-100" />
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-6">
-                                            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><IconActivity className="w-5 h-5 text-teal-500" />Entry & Exit LPR Accuracy</h3>
-                                            <div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={accuracyData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis domain={[90, 100]} tick={{fontSize: 12, fill: '#94a3b8'}} stroke="#94a3b8" unit="%" tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Legend /><ReferenceLine y={95} stroke="#10b981" strokeDasharray="3 3" label={{ value: 'Target 95%', position: 'right', fill: '#10b981', fontSize: 12 }} /><Line type="monotone" dataKey="Entry LPR (%)" stroke="#10b981" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /><Line type="monotone" dataKey="Exit LPR (%)" stroke="#f43f5e" strokeWidth={2} dot={{r: 4, strokeWidth: 2, fill: '#fff'}} /></LineChart></ResponsiveContainer></div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {activeTab === 'lpr' && (
-                                    <div className="space-y-6 animate-in fade-in duration-500">
-                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                            <div className="flex justify-between mb-8"><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><IconActivity className="w-5 h-5 text-purple-600" />LPR Performance</h3></div>
-                                            <div className="h-96"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={filteredData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis yAxisId="left" orientation="left" domain={[85, 100]} unit="%" stroke="#7c3aed" fontSize={12} tickLine={false} axisLine={false} /><YAxis yAxisId="right" orientation="right" stroke="#cbd5e1" tickFormatter={(val) => `${val/1000}k`} fontSize={12} tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Bar yAxisId="right" dataKey="lpr.total" name="Traffic Volume" barSize={32} fill="#a78bfa" fillOpacity={0.25} radius={[6, 6, 0, 0]} /><ReferenceLine yAxisId="left" y={90.25} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Target 90.25%', position: 'insideTopRight', fill: '#ef4444', fontSize: 12 }} /><Line yAxisId="left" type="monotone" dataKey="lpr.criteriaSum" name="LPR KPI Score" stroke="#7c3aed" strokeWidth={3} dot={{r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff'}} /></ComposedChart></ResponsiveContainer></div>
-                                        </div>
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                            <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2"><IconFileText className="w-5 h-5 text-purple-600" /><h3 className="font-bold text-slate-800">ตารางข้อมูล LPR Matching</h3></div>
-                                            <div className="overflow-x-auto custom-scrollbar"><table className="w-full text-xs md:text-sm text-left whitespace-nowrap"><thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
-                                                <tr>
-                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100 text-base">วันที่</th>
-                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100 text-base">Total</th>
-                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-purple-100 text-purple-900">Auto Matching</th>
-                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-teal-100 text-teal-900">Input LPR</th>
-                                                    <th colSpan="2" className="px-5 py-2 border-b border-r border-slate-200 text-center bg-amber-100 text-amber-900">Input Plaza</th>
-                                                    <th rowSpan="2" className="px-5 py-4 border-b border-r border-slate-200 text-center bg-slate-100">KPI Score (%)</th>
-                                                    <th rowSpan="2" className="px-5 py-4 border-b border-slate-200 text-center bg-slate-100">Status</th>
-                                                </tr>
-                                                <tr>
-                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-purple-50/50 text-purple-900">Total</th>
-                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-purple-50/50 text-purple-900">%</th>
-                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-teal-50/50 text-teal-900">Total</th>
-                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-teal-50/50 text-teal-900">%</th>
-                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-amber-50/50 text-amber-900">Total</th>
-                                                    <th className="px-4 py-2 border-b border-r border-slate-200 text-center bg-amber-50/50 text-amber-900">%</th>
-                                                </tr>
-                                            </thead><tbody className="divide-y divide-slate-100">{filteredData.map((row) => (<tr key={row.id} className="hover:bg-slate-50"><td className="px-5 py-3.5 font-medium text-slate-700 text-center">{row.date}</td><td className="px-5 py-3.5 text-center font-mono text-slate-600">{row.lpr.total.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-center font-mono text-purple-700">{row.lpr.auto.toLocaleString()}</td><td className="px-5 py-3.5 bg-purple-50/30 text-center text-purple-700 font-semibold">{row.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-3.5 bg-teal-50/30 text-center font-mono text-teal-700">{row.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-3.5 bg-teal-50/30 text-center text-teal-700">{row.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-3.5 bg-amber-50/30 text-center font-mono text-amber-700">{row.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-3.5 bg-amber-50/30 text-center text-amber-700">{row.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-3.5 text-center"><span className={`px-2.5 py-0.5 rounded-full font-bold ${row.lpr.criteriaSum > 90.25 ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}`}>{row.lpr.criteriaSum.toFixed(2)}%</span></td><td className="px-5 py-3.5 text-center"><StatusBadge passed={row.lpr.passed} /></td></tr>))}
-                                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-300"><td className="px-5 py-4 text-slate-800 text-center">รวม / เฉลี่ย</td><td className="px-5 py-4 text-center font-mono">{stats.lpr.total.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-center font-mono text-purple-900">{stats.lpr.auto.toLocaleString()}</td><td className="px-5 py-4 bg-purple-200/50 text-center text-purple-900">{stats.lpr.pAuto.toFixed(2)}%</td><td className="px-5 py-4 bg-teal-200/50 text-center font-mono text-teal-900">{stats.lpr.inputMatch.toLocaleString()}</td><td className="px-5 py-4 bg-teal-200/50 text-center text-teal-900">{stats.lpr.pInputMatch.toFixed(2)}%</td><td className="px-5 py-4 bg-amber-200/50 text-center font-mono text-amber-900">{stats.lpr.inputPlaza.toLocaleString()}</td><td className="px-5 py-4 bg-amber-200/50 text-center text-amber-900">{stats.lpr.pInputPlaza.toFixed(2)}%</td><td className="px-5 py-4 text-center text-slate-800">{stats.avgLprCriteria}%</td><td className="px-5 py-4 text-center text-xs text-slate-400">AVG</td></tr>
-                                            </tbody></table></div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {activeTab === 'etc' && (
-                                    <div className="space-y-6 animate-in fade-in duration-500">
-                                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                            <div className="flex justify-between mb-8"><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><IconActivity className="w-5 h-5 text-orange-600" />ETC Performance</h3></div>
-                                            <div className="h-96"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={filteredData}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" /><XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} /><YAxis yAxisId="left" orientation="left" domain={[94, 100]} unit="%" stroke="#ea580c" fontSize={12} tickLine={false} axisLine={false} /><YAxis yAxisId="right" orientation="right" stroke="#cbd5e1" tickFormatter={(val) => `${val/1000}k`} fontSize={12} tickLine={false} axisLine={false} /><Tooltip content={<CustomRechartsTooltip />} /><Bar yAxisId="right" dataKey="etc.total" name="Traffic Volume" barSize={32} fill="#fdba74" fillOpacity={0.25} radius={[6, 6, 0, 0]} /><ReferenceLine yAxisId="left" y={98} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Target 98%', position: 'insideTopRight', fill: '#ef4444', fontSize: 12 }} /><Line yAxisId="left" type="monotone" dataKey="etc.criteriaSum" name="ETC KPI Score" stroke="#ea580c" strokeWidth={3} dot={{r: 4, fill: '#ea580c', strokeWidth: 2, stroke: '#fff'}} /></ComposedChart></ResponsiveContainer></div>
-                                        </div>
-                                        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                            <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2"><IconFileText className="w-5 h-5 text-orange-600" /><h3 className="font-bold text-slate-800">ตารางข้อมูล ETC Matching</h3></div>
-                                            {/* ETC Table optimized for fit without scroll */}
-                                            <div className="overflow-x-auto custom-scrollbar">
-                                                <table className="w-full text-[10px] md:text-xs text-left whitespace-nowrap table-compact">
-                                                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider">
-                                                        <tr>
-                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100 text-base">วันที่</th>
-                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100 text-base">Total</th>
-                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-100 text-blue-900">Auto</th>
-                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-100 text-emerald-900">Handheld</th>
-                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-100 text-orange-900">Auto Matching LPR</th>
-                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-100 text-indigo-900">Input LPR</th>
-                                                            <th colSpan="2" className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-100 text-gray-900">Input Plaza</th>
-                                                            <th rowSpan="2" className="py-3 px-2 border-b border-r border-slate-200 text-center bg-slate-100">KPI(%)</th>
-                                                            <th rowSpan="2" className="py-3 px-2 border-b border-slate-200 text-center bg-slate-100">Status</th>
-                                                        </tr>
-                                                        <tr>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-50/50 text-blue-900">Total</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-blue-50/50 text-blue-900">%</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-900">Total</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-emerald-50/50 text-emerald-900">%</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-50/50 text-orange-900">Total</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-orange-50/50 text-orange-900">%</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">Total</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-indigo-50/50 text-indigo-900">%</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-50/50 text-gray-900">Total</th>
-                                                            <th className="py-2 px-2 border-b border-r border-slate-200 text-center bg-gray-50/50 text-gray-900">%</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-slate-100">
-                                                        {filteredData.map((row) => (
-                                                            <tr key={row.id} className="hover:bg-slate-50">
-                                                                <td className="py-2 font-medium text-slate-700 text-center">{row.date}</td>
-                                                                <td className="py-2 text-center font-mono text-slate-600">{row.etc.total.toLocaleString()}</td>
-                                                                <td className="py-2 bg-blue-50/30 text-center font-mono text-blue-700">{row.etc.auto.toLocaleString()}</td>
-                                                                <td className="py-2 bg-blue-50/30 text-center text-blue-700 font-semibold">{row.etc.pAuto.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-emerald-50/30 text-center font-mono text-emerald-700">{row.etc.inputEntry.toLocaleString()}</td>
-                                                                <td className="py-2 bg-emerald-50/30 text-center text-emerald-700">{row.etc.pInputEntry.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-orange-50/30 text-center font-mono text-orange-700">{row.etc.autoLpr.toLocaleString()}</td>
-                                                                <td className="py-2 bg-orange-50/30 text-center text-orange-700">{row.etc.pAutoLpr.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-indigo-50/30 text-center font-mono text-indigo-700">{row.etc.inputLpr.toLocaleString()}</td>
-                                                                <td className="py-2 bg-indigo-50/30 text-center text-indigo-700">{row.etc.pInputLpr.toFixed(2)}%</td>
-                                                                <td className="py-2 bg-gray-50/50 text-center font-mono text-gray-600">{row.etc.inputPlaza.toLocaleString()}</td>
-                                                                <td className="py-2 bg-gray-50/50 text-center text-gray-600">{row.etc.pInputPlaza.toFixed(2)}%</td>
-                                                                <td className="py-2 text-center font-bold">{row.etc.criteriaSum.toFixed(2)}%</td>
-                                                                <td className="py-2 text-center"><StatusBadge passed={row.etc.passed} /></td>
-                                                            </tr>
-                                                        ))}
-                                                        <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
-                                                            <td className="py-2 text-slate-800 text-center">Total</td>
-                                                            <td className="py-2 text-center font-mono">{stats.etc.total.toLocaleString()}</td>
-                                                            <td className="py-2 bg-blue-200/50 text-center font-mono text-blue-900">{stats.etc.auto.toLocaleString()}</td>
-                                                            <td className="py-2 bg-blue-200/50 text-center text-blue-900">{stats.etc.pAuto.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-emerald-200/50 text-center font-mono text-emerald-900">{stats.etc.inputEntry.toLocaleString()}</td>
-                                                            <td className="py-2 bg-emerald-200/50 text-center text-emerald-900">{stats.etc.pInputEntry.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-orange-200/50 text-center font-mono text-orange-900">{stats.etc.autoLpr.toLocaleString()}</td>
-                                                            <td className="py-2 bg-orange-200/50 text-center text-orange-900">{stats.etc.pAutoLpr.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-indigo-200/50 text-center font-mono text-indigo-900">{stats.etc.inputLpr.toLocaleString()}</td>
-                                                            <td className="py-2 bg-indigo-200/50 text-center text-indigo-900">{stats.etc.pInputLpr.toFixed(2)}%</td>
-                                                            <td className="py-2 bg-gray-200/50 text-center font-mono text-gray-800">{stats.etc.inputPlaza.toLocaleString()}</td>
-                                                            <td className="py-2 bg-gray-200/50 text-center text-gray-800">{stats.etc.pInputPlaza.toFixed(2)}%</td>
-                                                            <td className="py-2 text-center text-slate-800">{stats.avgEtcCriteria}%</td>
-                                                            <td className="py-2 text-center text-xs text-slate-400">AVG</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {['entry', 'exit'].map(type => (
-                                    activeTab === type && (
-                                        <div key={type} className="space-y-6 animate-in fade-in duration-500">
-                                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                                                <div className="flex justify-between mb-8">
-                                                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                                        <IconActivity className={`w-5 h-5 ${type === 'entry' ? 'text-emerald-600' : 'text-pink-600'}`} />
-                                                        {type === 'entry' ? 'Entry LPR Accuracy' : 'Exit LPR Accuracy'}
-                                                    </h3>
-                                                </div>
-                                                <div className="h-96">
-                                                    <ResponsiveContainer width="100%" height="100%">
-                                                        <ComposedChart data={filteredData}>
-                                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                            <XAxis dataKey="date" tick={<CustomAxisTick />} stroke="#94a3b8" tickLine={false} axisLine={false} />
-                                                            <YAxis yAxisId="left" orientation="left" domain={[80, 100]} unit="%" stroke={type === 'entry' ? '#059669' : '#e11d48'} fontSize={12} tickLine={false} axisLine={false} />
-                                                            <YAxis yAxisId="right" orientation="right" stroke="#cbd5e1" tickFormatter={(val) => `${val/1000}k`} fontSize={12} tickLine={false} axisLine={false} />
-                                                            <Tooltip content={<CustomRechartsTooltip />} />
-                                                            <Bar yAxisId="right" dataKey={`${type}Lpr.total`} name="Total Volume" barSize={32} fill={type === 'entry' ? '#a7f3d0' : '#fecdd3'} fillOpacity={0.4} radius={[6, 6, 0, 0]} />
-                                                            <ReferenceLine yAxisId="left" y={95} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Target 95%', position: 'insideTopRight', fill: '#ef4444', fontSize: 12 }} />
-                                                            <Line yAxisId="left" type="monotone" dataKey={`${type}Lpr.lprHPercent`} name="% LPR > 95%" stroke={type === 'entry' ? '#059669' : '#e11d48'} strokeWidth={3} dot={{r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#fff'}} />
-                                                        </ComposedChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                                <div className="p-5 bg-white border-b border-slate-100 flex items-center gap-2">
-                                                    <IconFileText className={`w-5 h-5 ${type === 'entry' ? 'text-emerald-600' : 'text-pink-600'}`} />
-                                                    <h3 className="font-bold text-slate-800">{type === 'entry' ? 'Entry LPR Data' : 'Exit LPR Data'}</h3>
-                                                </div>
-                                                <div className="overflow-x-auto custom-scrollbar">
-                                                    <table className="w-full text-xs md:text-sm text-left whitespace-nowrap">
-                                                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase tracking-wider">
-                                                            <tr>
-                                                                <th className="px-6 py-4">วันที่</th>
-                                                                <th className="px-6 py-4 text-right">Total</th>
-                                                                {/* Corrected Exit LPR Header Colors */}
-                                                                <th className={`px-6 py-4 text-right ${type === 'entry' ? 'bg-emerald-50 text-emerald-900' : 'bg-emerald-50 text-emerald-900'}`}>LPR &gt; 95%</th>
-                                                                <th className={`px-6 py-4 text-right ${type === 'entry' ? 'bg-emerald-50 text-emerald-900' : 'bg-emerald-50 text-emerald-900'}`}>%</th>
-                                                                {/* Corrected Entry/Exit LPR < 95% Header Colors to Red */}
-                                                                <th className="px-6 py-4 text-right text-rose-900 bg-rose-50">LPR &lt; 95%</th>
-                                                                <th className="px-6 py-4 text-right text-rose-900 bg-rose-50">%</th>
-                                                                <th className="px-6 py-4 text-center">Status</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-100">
-                                                            {filteredData.map((row) => {
-                                                                const item = row[`${type}Lpr`];
-                                                                // Safety check for undefined item to prevent ReferenceError
-                                                                if (!item) return null; 
-
-                                                                return (
-                                                                    <tr key={row.id} className="hover:bg-slate-50">
-                                                                        <td className="px-6 py-3.5 font-medium text-slate-700">{row.date}</td>
-                                                                        <td className="px-6 py-3.5 text-right font-mono text-slate-600">{(item.total || 0).toLocaleString()}</td>
-                                                                        {/* Corrected Exit LPR Data Colors */}
-                                                                        <td className={`px-6 py-3.5 text-right font-mono ${type === 'entry' ? 'bg-emerald-50/30 text-emerald-700' : 'bg-emerald-50/30 text-emerald-700'}`}>{(item.lprH || 0).toLocaleString()}</td>
-                                                                        <td className={`px-6 py-3.5 text-right font-bold ${type === 'entry' ? 'bg-emerald-50/30 text-emerald-700' : 'bg-emerald-50/30 text-emerald-700'}`}>{(item.lprHPercent || 0).toFixed(2)}%</td>
-                                                                        {/* Corrected Entry/Exit LPR < 95% Data Colors to Red */}
-                                                                        <td className="px-6 py-3.5 text-right font-mono text-rose-700 bg-rose-50/30">{(item.lprL || 0).toLocaleString()}</td>
-                                                                        <td className="px-6 py-3.5 text-right font-bold text-rose-700 bg-rose-50/30">{(item.lprLPercent || 0).toFixed(2)}%</td>
-                                                                        <td className="px-6 py-3.5 text-center"><StatusBadge passed={item.passed} /></td>
-                                                                    </tr>
-                                                                );
-                                                            })}
-                                                            <tr className="bg-slate-100 font-bold border-t-2 border-slate-300">
-                                                                <td className="px-6 py-4 text-slate-800">รวม / เฉลี่ย</td>
-                                                                <td className="px-6 py-4 text-right font-mono">{(stats[`${type}Lpr`]?.total || 0).toLocaleString()}</td>
-                                                                {/* Corrected Summary Row Colors */}
-                                                                <td className={`px-6 py-4 text-right font-mono ${type === 'entry' ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-100 text-emerald-900'}`}>{(stats[`${type}Lpr`]?.lprH || 0).toLocaleString()}</td>
-                                                                <td className={`px-6 py-4 text-right font-bold ${type === 'entry' ? 'bg-emerald-100 text-emerald-900' : 'bg-emerald-100 text-emerald-900'}`}>{(stats[`${type}Lpr`]?.lprHPercent || 0).toFixed(2)}%</td>
-                                                                <td className="px-6 py-4 text-right font-mono text-rose-900 bg-rose-100">{(stats[`${type}Lpr`]?.lprL || 0).toLocaleString()}</td>
-                                                                <td className="px-6 py-4 text-right font-bold text-rose-900 bg-rose-100">{(stats[`${type}Lpr`]?.lprLPercent || 0).toFixed(2)}%</td>
-                                                                <td className="px-6 py-4 text-center text-xs text-slate-400">AVG</td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )
-                                ))}
-                            </>
-                        )}
-                    </main>
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Dashboard />);
     </script>
 </body>
 </html>
