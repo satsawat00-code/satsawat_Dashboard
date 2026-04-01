@@ -224,7 +224,7 @@
         // App State
         // -----------------------
         let records = [];
-        let sheetUrl = '';
+        let sheetUrl = localStorage.getItem('slipTracker_sheetUrl') || '';
         let showSettings = false;
         let isProcessing = false;
 
@@ -267,6 +267,10 @@
         // -----------------------
         // Set today's date in form
         formDate.value = new Date().toISOString().split('T')[0];
+        // โหลด URL ที่เคยบันทึกไว้มาแสดงในช่องกรอก
+        if (sheetUrl) {
+            sheetUrlInput.value = sheetUrl;
+        }
         // Initialize Lucide Icons
         lucide.createIcons();
 
@@ -448,6 +452,7 @@
         // Update Sheet URL
         sheetUrlInput.addEventListener('input', (e) => {
             sheetUrl = e.target.value.trim();
+            localStorage.setItem('slipTracker_sheetUrl', sheetUrl);
         });
 
         // Delete Record
