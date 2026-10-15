@@ -1,481 +1,661 @@
 <!DOCTYPE html>
+
 <html lang="th">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกรายรับ-รายจ่าย จากสลิป</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Prompt', sans-serif; background-color: #f8fafc; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>SlipTracker - บันทึกรายจ่ายจากสลิป</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>body{font-family:'Prompt',sans-serif;background:#f8fafc}</style>
+
 </head>
-<body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <header class="bg-white shadow-sm sticky top-0 z-40">
-        <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="bg-indigo-600 p-2 rounded-xl text-white">
-                    <i data-lucide="receipt" class="w-5 h-5"></i>
-                </div>
-                <h1 class="text-lg font-bold text-slate-800">SlipTracker</h1>
-            </div>
-            <button id="toggleSettingsBtn" class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
-                <i data-lucide="settings" id="settingsIcon" class="w-5 h-5"></i>
-            </button>
+<body class="text-slate-800 min-h-screen">
+
+<header class="bg-white shadow-sm sticky top-0 z-40">
+
+  <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
+
+    <h1 class="text-lg font-bold">🧾 SlipTracker</h1>
+
+    <button id="settingsBtn" class="p-2 rounded-full hover:bg-slate-100">⚙️</button>
+
+  </div>
+
+  <div id="settings" class="hidden border-t bg-slate-50">
+
+    <div class="max-w-3xl mx-auto px-4 py-4 space-y-3 text-sm">
+
+      <div><label class="text-xs font-semibold text-slate-500">Google Apps Script URL</label>
+
+        <input id="sheetUrl" class="w-full border rounded-lg p-2 mt-1" placeholder="https://script.google.com/macros/s/.../exec"></div>
+
+      <div><label class="text-xs font-semibold text-slate-500">Gemini API Key</label>
+
+        <input id="apiKey" type="password" class="w-full border rounded-lg p-2 mt-1" placeholder="AIzaSy...">
+
+        <button id="testKey" class="text-xs text-indigo-600 mt-1">ทดสอบ Key</button></div>
+
+      <div class="border-t pt-3">
+
+        <label class="text-xs font-semibold text-slate-500">⏰ เตือนให้อัปโหลดทุกวัน</label>
+
+        <div class="flex gap-2 mt-1 items-center">
+
+          <input id="remTime" type="time" value="21:00" class="border rounded-lg p-2">
+
+          <button id="icsBtn" class="bg-indigo-600 text-white rounded-lg px-3 py-2">เพิ่มลงปฏิทินมือถือ</button>
+
+          <button id="notiBtn" class="border rounded-lg px-3 py-2">เตือนในเบราว์เซอร์</button>
+
         </div>
 
-        <div id="settingsPanel" class="hidden border-t border-slate-100 bg-slate-50/50">
-            <div class="max-w-3xl mx-auto px-4 py-4 space-y-4">
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                    <h2 class="text-sm font-bold flex items-center gap-2 text-slate-700">
-                        <i data-lucide="database" class="w-4 h-4 text-indigo-500"></i> ตั้งค่าการเชื่อมต่อ
-                    </h2>
-                    
-                    <div>
-                        <label class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
-                            <i data-lucide="link" class="w-3.5 h-3.5"></i> Google Apps Script URL (สำหรับบันทึกลงชีต)
-                        </label>
-                        <input type="text" id="sheetUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full border-slate-200 rounded-lg p-2.5 text-sm bg-white border outline-none focus:border-indigo-500" />
-                    </div>
+        <p class="text-xs text-slate-400 mt-1">ปุ่มปฏิทินจะดาวน์โหลดไฟล์ .ics ที่ตั้งเตือนซ้ำทุกวัน เปิดแล้วกดเพิ่มได้เลย (เตือนได้แม้ไม่ได้เปิดเว็บ)</p>
 
-                    <div>
-                        <label class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
-                            <i data-lucide="key" class="w-3.5 h-3.5"></i> Gemini API Key (สำหรับอ่านสลิป)
-                        </label>
-                        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full border-slate-200 rounded-lg p-2.5 text-sm bg-white border outline-none focus:border-indigo-500" />
-                        <div class="flex justify-between items-center mt-2">
-                            <p class="text-xs text-slate-400">จำเป็นต้องใส่เพื่อวิเคราะห์รูปภาพ (<a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-indigo-500 hover:underline">รับ API ฟรี</a>)</p>
-                            <button id="testApiBtn" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition-colors">ทดสอบ Key</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
+      </div>
 
-    <main class="max-w-3xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-6 pb-24">
-        
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-5 text-white shadow-md shadow-indigo-200 relative overflow-hidden">
-                <div class="absolute -right-4 -top-4 opacity-10"><i data-lucide="wallet" class="w-24 h-24"></i></div>
-                <p class="text-indigo-100 text-sm font-medium mb-1 relative z-10">รายจ่ายทั้งหมด</p>
-                <h2 class="text-2xl font-bold relative z-10">฿<span id="balanceAmount">0.00</span></h2>
-            </div>
-            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative overflow-hidden flex flex-col justify-center items-center text-center cursor-pointer hover:border-indigo-300 transition-colors" onclick="document.getElementById('fileInput').click()">
-                <div class="bg-indigo-50 text-indigo-600 p-3 rounded-full mb-2">
-                    <i data-lucide="upload-cloud" class="w-6 h-6"></i>
-                </div>
-                <p class="text-sm font-semibold text-slate-700">อัปโหลดสลิป</p>
-                <p class="text-xs text-slate-400 mt-1">แตะเพื่อเลือกรูปภาพ</p>
-                <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
-            </div>
-        </div>
+      <button id="csvBtn" class="border rounded-lg px-3 py-2">⬇️ ส่งออก CSV</button>
 
-        <div id="uploadStatus" class="hidden glass-panel rounded-xl p-4 shadow-sm border border-indigo-100">
-            <div class="flex items-center gap-3">
-                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-slate-800" id="statusText">กำลังวิเคราะห์สลิป...</p>
-                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-                        <div id="progressBar" class="bg-indigo-600 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-500"></i> สรุปข้อมูล
-                </h3>
-                <select id="chartPeriodSelect" class="text-xs border-slate-200 rounded-lg p-1.5 bg-slate-50 border outline-none focus:border-indigo-500 text-slate-600">
-                    <option value="daily">รายวัน</option>
-                    <option value="monthly">รายเดือน</option>
-                    <option value="yearly">รายปี</option>
-                </select>
-            </div>
-            <div class="w-full h-48 relative">
-                <canvas id="expenseChart"></canvas>
-            </div>
-        </div>
+  </div>
 
-        <div>
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-slate-800">รายการล่าสุด</h3>
-                <span class="text-xs font-medium bg-slate-200 text-slate-600 px-2 py-1 rounded-md" id="txCount">0 รายการ</span>
-            </div>
-            <div id="transactionsList" class="space-y-3">
-                </div>
-        </div>
-    </main>
+</header>
 
-    <script>
-        // -----------------------
-        // Initialization
-        // -----------------------
-        lucide.createIcons();
 
-        // -----------------------
-        // State & DOM Elements
-        // -----------------------
-        let transactions = JSON.parse(localStorage.getItem('slipTracker_txs')) || [];
-        let storedApiKey = localStorage.getItem('slipTracker_apiKey') || '';
-        let storedSheetUrl = localStorage.getItem('slipTracker_sheetUrl') || '';
-        let expenseChartInstance = null; // ตัวแปรเก็บกราฟ
 
-        const settingsPanel = document.getElementById('settingsPanel');
-        const sheetUrlInput = document.getElementById('sheetUrlInput');
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const fileInput = document.getElementById('fileInput');
-        const chartPeriodSelect = document.getElementById('chartPeriodSelect');
-        
-        // Initialize inputs
-        sheetUrlInput.value = storedSheetUrl;
-        apiKeyInput.value = storedApiKey;
-        updateUI();
+<main class="max-w-3xl mx-auto px-4 py-5 space-y-4 pb-24">
 
-        // -----------------------
-        // Event Listeners
-        // -----------------------
-        document.getElementById('toggleSettingsBtn').addEventListener('click', () => {
-            settingsPanel.classList.toggle('hidden');
-        });
+  <div id="banner" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm flex items-center justify-between gap-2">
 
-        sheetUrlInput.addEventListener('input', (e) => {
-            storedSheetUrl = e.target.value.trim();
-            localStorage.setItem('slipTracker_sheetUrl', storedSheetUrl);
-        });
+    <span>📌 วันนี้ยังไม่ได้อัปโหลดสลิปเลย</span>
 
-        apiKeyInput.addEventListener('input', (e) => {
-            storedApiKey = e.target.value.trim();
-            localStorage.setItem('slipTracker_apiKey', storedApiKey);
-        });
+    <span class="flex gap-2 shrink-0">
 
-        chartPeriodSelect.addEventListener('change', renderChart);
+      <button onclick="fileInput.click()" class="bg-amber-500 text-white rounded-lg px-3 py-1">อัปโหลด</button>
 
-        document.getElementById('testApiBtn').addEventListener('click', async () => {
-            const testKey = apiKeyInput.value.trim() || storedApiKey;
-            const btn = document.getElementById('testApiBtn');
-            
-            if (!testKey) {
-                alert('กรุณาวาง API Key ในช่องก่อนกดทดสอบครับ');
-                return;
-            }
-            
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin inline"></i> ทดสอบ...';
-            lucide.createIcons();
-            
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${testKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ role: "user", parts: [{ text: "Hello" }] }]
-                    })
-                });
-                
-                const result = await response.json();
-                if (result.error) throw new Error(result.error.message);
-                
-                alert('✅ สำเร็จ! API Key ของคุณพร้อมใช้งานแล้วครับ (เชื่อมต่อ Gemini 2.5 Flash ได้ปกติ)');
-            } catch (err) {
-                alert('❌ มีปัญหาการเชื่อมต่อ:\n' + err.message);
-            } finally {
-                btn.textContent = 'ทดสอบ Key';
-            }
-        });
+      <button onclick="skipToday()" class="border border-amber-300 rounded-lg px-3 py-1">วันนี้ไม่มีจ่าย</button>
 
-        fileInput.addEventListener('change', handleFiles);
+    </span>
 
-        // -----------------------
-        // Core Logic
-        // -----------------------
-        async function handleFiles(e) {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            
-            if (!storedApiKey) {
-                alert('กรุณาตั้งค่า Gemini API Key ในเมนูตั้งค่าก่อนอัปโหลดสลิปครับ');
-                settingsPanel.classList.remove('hidden');
-                return;
-            }
+  </div>
 
-            const uploadStatus = document.getElementById('uploadStatus');
-            const statusText = document.getElementById('statusText');
-            const progressBar = document.getElementById('progressBar');
-            
-            uploadStatus.classList.remove('hidden');
-            
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                statusText.textContent = `กำลังอ่านสลิปที่ ${i + 1} จาก ${files.length}...`;
-                progressBar.style.width = `${((i) / files.length) * 100}%`;
-                
-                try {
-                    const base64Data = await fileToBase64(file);
-                    const slipData = await extractDataFromSlip(base64Data, file.type);
-                    
-                    if (slipData) {
-                        // ซ้อนชั้นเช็คความปลอดภัย: หาก AI ตอบกลับมาเป็นปี พ.ศ. (เกิน 2500) ให้แปลงเป็น ค.ศ. อัตโนมัติ
-                        if (slipData.date) {
-                            let dParts = slipData.date.split('/');
-                            if (dParts.length === 3 && parseInt(dParts[2]) > 2500) {
-                                dParts[2] = (parseInt(dParts[2]) - 543).toString();
-                                slipData.date = dParts.join('/');
-                            }
-                        }
 
-                        const newTx = {
-                            id: Date.now().toString() + i,
-                            ...slipData,
-                            timestamp: new Date().toISOString()
-                        };
-                        
-                        // Save local
-                        transactions.unshift(newTx);
-                        localStorage.setItem('slipTracker_txs', JSON.stringify(transactions));
-                        updateUI();
-                        
-                        // Sync to Sheets
-                        if (storedSheetUrl) {
-                            statusText.textContent = `กำลังบันทึกลง Google Sheets...`;
-                            await saveToGoogleSheets(newTx);
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error processing file:", err);
-                    alert(`ภาพที่ ${i+1} อ่านไม่สำเร็จ: ${err.message}`);
-                }
-            }
-            
-            progressBar.style.width = `100%`;
-            setTimeout(() => {
-                uploadStatus.classList.add('hidden');
-                progressBar.style.width = `0%`;
-                fileInput.value = ''; // Reset input
-            }, 1000);
-        }
 
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
-        }
+  <div class="flex items-center justify-between">
 
-        async function extractDataFromSlip(base64String, mimeType) {
-            const base64Content = base64String.split(',')[1];
-            
-            const promptText = `
-                วิเคราะห์รูปสลิปโอนเงินนี้ และดึงข้อมูลออกมาเป็น JSON format เท่านั้น โดยไม่ต้องมีเครื่องหมาย \`\`\`json ครอบ
-                ข้อมูลที่ต้องการ:
-                {
-                    "date": "วันที่โอนเงิน (รูปแบบ DD/MM/YYYY โดยแปลงปี พ.ศ. ให้เป็นปี ค.ศ. เสมอ เช่น ถ้าเป็นปี 2567 ให้แปลงเป็น 2024)",
-                    "time": "เวลาที่โอนเงิน (รูปแบบ HH:MM)",
-                    "amount": ตัวเลขจำนวนเงิน (ไม่ต้องมีลูกน้ำ),
-                    "receiver": "ชื่อผู้รับเงิน หรือ ชื่อร้านค้า",
-                    "bank": "ธนาคารปลายทาง"
-                }
-            `;
+    <select id="month" class="border rounded-lg p-2 text-sm bg-white"></select>
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${storedApiKey}`;
-            
-            const payload = {
-                contents: [{
-                    parts: [
-                        { text: promptText },
-                        { inlineData: { mimeType: mimeType, data: base64Content } }
-                    ]
-                }],
-                generationConfig: {
-                    temperature: 0.1,
-                    responseMimeType: "application/json"
-                }
-            };
+    <span class="text-xs text-slate-500">🔥 บันทึกต่อเนื่อง <b id="streak">0</b> วัน</span>
 
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+  </div>
 
-            const result = await response.json();
-            
-            if (result.error) {
-                throw new Error(result.error.message);
-            }
 
-            try {
-                const jsonText = result.candidates[0].content.parts[0].text;
-                return JSON.parse(jsonText);
-            } catch (e) {
-                throw new Error("AI ตอบกลับมาผิดรูปแบบ ไม่สามารถอ่านข้อมูลได้");
-            }
-        }
 
-        async function saveToGoogleSheets(data) {
-            try {
-                await fetch(storedSheetUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        date: data.date,
-                        time: data.time,
-                        amount: data.amount,
-                        receiver: data.receiver,
-                        bank: data.bank
-                    })
-                });
-            } catch (error) {
-                console.error("Sheet sync error:", error);
-            }
-        }
+  <div class="grid grid-cols-2 gap-3">
 
-        window.deleteTx = function(id) {
-            if(confirm('ต้องการลบรายการนี้ใช่หรือไม่?')) {
-                transactions = transactions.filter(t => t.id !== id);
-                localStorage.setItem('slipTracker_txs', JSON.stringify(transactions));
-                updateUI();
-            }
-        }
+    <div class="bg-indigo-600 text-white rounded-2xl p-5">
 
-        // -----------------------
-        // Chart Logic (NEW)
-        // -----------------------
-        function renderChart() {
-            const period = chartPeriodSelect.value;
-            const ctx = document.getElementById('expenseChart').getContext('2d');
-            
-            // รวบรวมข้อมูลตามที่เลือก (วัน, เดือน, ปี)
-            const aggregatedData = {};
-            
-            transactions.forEach(tx => {
-                const amt = Number(tx.amount) || 0;
-                if (!tx.date) return;
-                
-                let key = tx.date; // ค่าเริ่มต้น (รายวัน)
-                const parts = tx.date.split('/'); // แยก DD, MM, YYYY
-                
-                if (parts.length === 3) {
-                    if (period === 'monthly') {
-                        key = `${parts[1]}/${parts[2]}`; // MM/YYYY
-                    } else if (period === 'yearly') {
-                        key = `${parts[2]}`; // YYYY
-                    }
-                }
-                
-                aggregatedData[key] = (aggregatedData[key] || 0) + amt;
-            });
+      <p class="text-indigo-100 text-sm">รายจ่ายเดือนนี้</p>
 
-            // เรียงลำดับวันที่จากอดีตไปปัจจุบัน
-            const sortedKeys = Object.keys(aggregatedData).sort((a, b) => {
-                let dateA, dateB;
-                if (period === 'daily') {
-                    let [d, m, y] = a.split('/');
-                    dateA = new Date(y, m - 1, d);
-                    let [d2, m2, y2] = b.split('/');
-                    dateB = new Date(y2, m2 - 1, d2);
-                } else if (period === 'monthly') {
-                    let [m, y] = a.split('/');
-                    dateA = new Date(y, m - 1, 1);
-                    let [m2, y2] = b.split('/');
-                    dateB = new Date(y2, m2 - 1, 1);
-                } else {
-                    dateA = new Date(a, 0, 1);
-                    dateB = new Date(b, 0, 1);
-                }
-                return dateA - dateB;
-            });
+      <h2 class="text-2xl font-bold">฿<span id="total">0.00</span></h2>
 
-            const labels = sortedKeys;
-            const dataValues = sortedKeys.map(k => aggregatedData[k]);
+      <p class="text-xs text-indigo-200 mt-1" id="count"></p>
 
-            // ลบกราฟเก่าออกก่อนวาดใหม่ (ป้องกันบัค)
-            if (expenseChartInstance) {
-                expenseChartInstance.destroy();
-            }
+    </div>
 
-            expenseChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'ยอดรวม (฿)',
-                        data: dataValues,
-                        backgroundColor: 'rgba(79, 70, 229, 0.8)',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { font: { family: "'Prompt', sans-serif", size: 10 } } },
-                        x: { ticks: { font: { family: "'Prompt', sans-serif", size: 10 } } }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-        }
+    <div class="bg-white border rounded-2xl p-3 text-center cursor-pointer hover:border-indigo-300" onclick="fileInput.click()">
 
-        // -----------------------
-        // UI Rendering
-        // -----------------------
-        function updateUI() {
-            // Update Balance
-            const total = transactions.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-            document.getElementById('balanceAmount').textContent = total.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('txCount').textContent = `${transactions.length} รายการ`;
+      <div class="text-2xl">☁️</div>
 
-            // Render Chart
-            renderChart();
+      <p class="text-sm font-semibold">อัปโหลดสลิป</p>
 
-            // Render List
-            const list = document.getElementById('transactionsList');
-            if (transactions.length === 0) {
-                list.innerHTML = `
-                    <div class="text-center py-10 bg-white border border-slate-200 rounded-2xl border-dashed">
-                        <div class="text-slate-300 mb-2 flex justify-center"><i data-lucide="receipt" class="w-10 h-10"></i></div>
-                        <p class="text-slate-500 font-medium">ยังไม่มีรายการ</p>
-                        <p class="text-xs text-slate-400 mt-1">อัปโหลดสลิปเพื่อเริ่มบันทึก</p>
-                    </div>`;
-            } else {
-                list.innerHTML = transactions.map(tx => `
-                    <div class="bg-white border border-slate-100 p-4 rounded-xl shadow-sm flex items-center justify-between group">
-                        <div class="flex items-center gap-4">
-                            <div class="bg-red-50 text-red-500 p-2.5 rounded-full">
-                                <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-slate-800 text-sm line-clamp-1">${tx.receiver || 'ไม่ระบุชื่อ'}</h4>
-                                <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                                    <span>${tx.date} ${tx.time}</span>
-                                    ${tx.bank ? `<span class="bg-slate-100 px-1.5 py-0.5 rounded text-[10px]">${tx.bank}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-3 text-right">
-                            <span class="font-bold text-slate-800">฿${Number(tx.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</span>
-                            <button onclick="deleteTx('${tx.id}')" class="text-slate-300 hover:text-red-500 transition-colors">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            lucide.createIcons();
-        }
-    </script>
+      <p class="text-xs text-slate-400">แตะ / วางรูป (Ctrl+V)</p>
+
+      <input id="fileInput" type="file" accept="image/*" multiple class="hidden">
+
+    </div>
+
+  </div>
+
+
+
+  <div id="status" class="hidden bg-white border border-indigo-100 rounded-xl p-3 text-sm"></div>
+
+
+
+  <div class="bg-white border rounded-2xl p-4">
+
+    <div class="flex justify-between mb-2">
+
+      <h3 class="text-sm font-bold">สรุปข้อมูล</h3>
+
+      <select id="period" class="text-xs border rounded-lg p-1 bg-slate-50">
+
+        <option value="d">รายวัน (เดือนที่เลือก)</option><option value="m">รายเดือน</option><option value="y">รายปี</option>
+
+      </select>
+
+    </div>
+
+    <div class="h-48"><canvas id="chart"></canvas></div>
+
+  </div>
+
+
+
+  <div class="flex justify-between items-center">
+
+    <h3 class="text-lg font-bold">รายการ</h3>
+
+    <button onclick="openForm()" class="text-sm bg-slate-800 text-white rounded-lg px-3 py-1.5">+ เพิ่มเอง</button>
+
+  </div>
+
+  <div id="list" class="space-y-2"></div>
+
+</main>
+
+
+
+<div id="modal" class="hidden fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center p-4">
+
+  <div class="bg-white rounded-2xl p-5 w-full max-w-sm space-y-3 text-sm">
+
+    <h3 class="font-bold" id="mTitle">แก้ไขรายการ</h3>
+
+    <input id="fDate" type="date" class="w-full border rounded-lg p-2">
+
+    <input id="fTime" type="time" class="w-full border rounded-lg p-2">
+
+    <input id="fAmount" type="number" step="0.01" placeholder="จำนวนเงิน" class="w-full border rounded-lg p-2">
+
+    <input id="fReceiver" placeholder="ผู้รับ / ร้านค้า" class="w-full border rounded-lg p-2">
+
+    <input id="fBank" placeholder="ธนาคาร (ไม่บังคับ)" class="w-full border rounded-lg p-2">
+
+    <div class="flex gap-2 justify-end">
+
+      <button onclick="closeForm()" class="px-4 py-2 border rounded-lg">ยกเลิก</button>
+
+      <button onclick="saveForm()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">บันทึก</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<script>
+
+const $ = id => document.getElementById(id);
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+
+const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+const thDate = iso => { const [y,m,d] = iso.split('-'); return `${+d} ${thMonths[m-1]} ${String(+y+543).slice(2)}`; };
+
+const fmt = n => Number(n).toLocaleString('th-TH', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+
+
+// ---- state (ย้ายข้อมูลเก่า DD/MM/YYYY -> YYYY-MM-DD อัตโนมัติ) ----
+
+const normDate = s => {
+
+  if (!s) return '';
+
+  let m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  let y, mo, d;
+
+  if (m) { [d, mo, y] = [m[1], m[2], +m[3]]; }
+
+  else if ((m = String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) { [y, mo, d] = [+m[1], m[2], m[3]]; }
+
+  else return '';
+
+  if (y > 2400) y -= 543;
+
+  return `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+};
+
+let txs = load('slipTracker_txs', []).map(t => ({...t, date: normDate(t.date), added: t.added || (t.timestamp||'').slice(0,10)}));
+
+let apiKey = load('slipTracker_apiKey', '') ;
+
+let sheetUrl = load('slipTracker_sheetUrl', '');
+
+let skipDays = load('slipTracker_skip', []);
+
+// รองรับค่าเดิมที่เก็บเป็น string ธรรมดา
+
+if (typeof apiKey !== 'string') apiKey = '';
+
+if (typeof sheetUrl !== 'string') sheetUrl = '';
+
+let chart = null, editId = null;
+
+const rawGet = k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } };
+
+if (!apiKey) apiKey = rawGet('slipTracker_apiKey');
+
+if (!sheetUrl) sheetUrl = rawGet('slipTracker_sheetUrl');
+
+const saveAll = () => save('slipTracker_txs', txs);
+
+const saveSetting = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+
+
+$('apiKey').value = apiKey; $('sheetUrl').value = sheetUrl;
+
+$('settingsBtn').onclick = () => $('settings').classList.toggle('hidden');
+
+$('sheetUrl').oninput = e => { sheetUrl = e.target.value.trim(); saveSetting('slipTracker_sheetUrl', sheetUrl); };
+
+$('apiKey').oninput = e => { apiKey = e.target.value.trim(); saveSetting('slipTracker_apiKey', apiKey); };
+
+
+
+// ---- Gemini ----
+
+const MODEL = 'gemini-2.5-flash';
+
+const gem = body => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`, {
+
+  method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r => r.json());
+
+
+
+$('testKey').onclick = async () => {
+
+  if (!apiKey) return alert('กรุณาใส่ API Key ก่อน');
+
+  const r = await gem({contents:[{parts:[{text:'Hello'}]}]});
+
+  alert(r.error ? '❌ ' + r.error.message : '✅ API Key ใช้งานได้');
+
+};
+
+
+
+// ย่อรูปเหลือด้านยาว 1200px
+
+function compress(file) {
+
+  return new Promise((res, rej) => {
+
+    const img = new Image(), url = URL.createObjectURL(file);
+
+    img.onload = () => {
+
+      const s = Math.min(1, 1200 / Math.max(img.width, img.height));
+
+      const c = document.createElement('canvas');
+
+      c.width = img.width * s; c.height = img.height * s;
+
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+
+      URL.revokeObjectURL(url);
+
+      res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
+
+    };
+
+    img.onerror = () => rej(new Error('เปิดรูปไม่ได้'));
+
+    img.src = url;
+
+  });
+
+}
+
+
+
+async function readSlip(file) {
+
+  const data = await compress(file);
+
+  const prompt = `วิเคราะห์สลิปโอนเงินนี้ ตอบเป็น JSON เท่านั้น:
+
+{"date":"YYYY-MM-DD (แปลงปี พ.ศ. เป็น ค.ศ. เสมอ)","time":"HH:MM","amount":ตัวเลขไม่มีลูกน้ำ,"receiver":"ชื่อผู้รับหรือร้านค้า","bank":"ธนาคารปลายทาง","ref":"เลขที่รายการ/Ref ถ้ามี ไม่มีให้เป็นสตริงว่าง"}`;
+
+  const r = await gem({
+
+    contents:[{parts:[{text:prompt},{inlineData:{mimeType:'image/jpeg', data}}]}],
+
+    generationConfig:{temperature:0.1, responseMimeType:'application/json'}});
+
+  if (r.error) throw new Error(r.error.message);
+
+  let j;
+
+  try { j = JSON.parse(r.candidates[0].content.parts[0].text); } catch { throw new Error('AI ตอบผิดรูปแบบ'); }
+
+  j.date = normDate(j.date); j.amount = Number(j.amount);
+
+  if (!j.date || !Number.isFinite(j.amount)) throw new Error('อ่านวันที่/จำนวนเงินไม่ได้');
+
+  return j;
+
+}
+
+
+
+const isDup = s => txs.some(t => (s.ref && t.ref === s.ref) ||
+
+  (t.date === s.date && t.time === s.time && Number(t.amount) === s.amount && t.receiver === s.receiver));
+
+
+
+function sync(t) {
+
+  if (!sheetUrl) return;
+
+  fetch(sheetUrl, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+
+    body: JSON.stringify({id:t.id, date:t.date, time:t.time, amount:t.amount, receiver:t.receiver, bank:t.bank})}).catch(() => {});
+
+}
+
+
+
+// ---- upload ----
+
+const fileInput = $('fileInput');
+
+fileInput.onchange = e => handleFiles([...e.target.files]).then(() => fileInput.value = '');
+
+document.addEventListener('paste', e => {
+
+  const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
+
+  if (fs.length) handleFiles(fs);
+
+});
+
+
+
+async function handleFiles(files) {
+
+  if (!files.length) return;
+
+  if (!apiKey) { alert('กรุณาใส่ Gemini API Key ในตั้งค่าก่อน'); $('settings').classList.remove('hidden'); return; }
+
+  const st = $('status'); st.classList.remove('hidden');
+
+  let ok = 0, dup = 0; const fails = [];
+
+  for (let i = 0; i < files.length; i++) {
+
+    st.textContent = `⏳ กำลังอ่านสลิป ${i+1}/${files.length}...`;
+
+    try {
+
+      const s = await readSlip(files[i]);
+
+      if (isDup(s)) { dup++; continue; }
+
+      const t = {id: Date.now() + '-' + i, date:s.date, time:s.time || '', amount:s.amount,
+
+                 receiver:s.receiver || '', bank:s.bank || '', ref:s.ref || '', added: todayISO()};
+
+      txs.push(t); saveAll(); sync(t); ok++;
+
+    } catch (err) { fails.push(`รูปที่ ${i+1}: ${err.message}`); }
+
+  }
+
+  render();
+
+  st.textContent = `✅ สำเร็จ ${ok} • ซ้ำ ${dup} • ล้มเหลว ${fails.length}` + (fails.length ? '\n' + fails.join(' | ') : '');
+
+  setTimeout(() => st.classList.add('hidden'), fails.length ? 8000 : 3500);
+
+}
+
+
+
+// ---- add / edit ----
+
+function openForm(id) {
+
+  editId = id || null;
+
+  const t = txs.find(x => x.id === id) || {date: todayISO(), time:'', amount:'', receiver:'', bank:''};
+
+  $('mTitle').textContent = id ? 'แก้ไขรายการ' : 'เพิ่มรายจ่าย';
+
+  $('fDate').value = t.date; $('fTime').value = t.time; $('fAmount').value = t.amount;
+
+  $('fReceiver').value = t.receiver; $('fBank').value = t.bank;
+
+  $('modal').classList.remove('hidden');
+
+}
+
+function closeForm() { $('modal').classList.add('hidden'); }
+
+function saveForm() {
+
+  const amount = Number($('fAmount').value);
+
+  if (!$('fDate').value || !Number.isFinite(amount) || amount <= 0) return alert('กรอกวันที่และจำนวนเงินให้ถูกต้อง');
+
+  const v = {date:$('fDate').value, time:$('fTime').value, amount, receiver:$('fReceiver').value.trim(), bank:$('fBank').value.trim()};
+
+  if (editId) Object.assign(txs.find(x => x.id === editId), v);
+
+  else { const t = {id: Date.now()+'', ref:'', added: todayISO(), ...v}; txs.push(t); sync(t); }
+
+  saveAll(); closeForm(); render();
+
+}
+
+function del(id) { if (confirm('ลบรายการนี้?')) { txs = txs.filter(t => t.id !== id); saveAll(); render(); } }
+
+
+
+// ---- reminders ----
+
+function skipToday() { skipDays.push(todayISO()); save('slipTracker_skip', skipDays); render(); }
+
+function recordedDays() { return new Set([...txs.map(t => t.added).filter(Boolean), ...skipDays]); }
+
+function streak() {
+
+  const days = recordedDays(); let n = 0; const d = new Date();
+
+  if (!days.has(todayISO())) d.setDate(d.getDate() - 1);
+
+  for (;;) {
+
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    if (!days.has(k)) break; n++; d.setDate(d.getDate() - 1);
+
+  }
+
+  return n;
+
+}
+
+$('icsBtn').onclick = () => {
+
+  const [h, m] = ($('remTime').value || '21:00').split(':');
+
+  const d = new Date(); const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+
+  const url = location.protocol.startsWith('http') ? location.href : '';
+
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SlipTracker//TH','BEGIN:VEVENT',
+
+    `UID:sliptracker-daily@local`, `DTSTAMP:${ds}T000000Z`, `DTSTART:${ds}T${h}${m}00`, 'DURATION:PT10M',
+
+    'RRULE:FREQ=DAILY','SUMMARY:อัปโหลดสลิปรายจ่ายวันนี้', url ? `DESCRIPTION:${url}` : 'DESCRIPTION:เปิดแอป SlipTracker แล้วอัปโหลดสลิป',
+
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:อัปโหลดสลิปรายจ่ายวันนี้','TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+
+  const a = document.createElement('a');
+
+  a.href = URL.createObjectURL(new Blob([ics], {type:'text/calendar'}));
+
+  a.download = 'sliptracker-reminder.ics'; a.click();
+
+};
+
+$('notiBtn').onclick = async () => {
+
+  if (!('Notification' in window)) return alert('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
+
+  if (await Notification.requestPermission() !== 'granted') return;
+
+  saveSetting('slipTracker_noti', $('remTime').value);
+
+  alert('ตั้งแล้ว: จะเตือนตอนเปิดหน้านี้ค้างไว้ตามเวลาที่เลือก');
+
+};
+
+setInterval(() => {
+
+  const t = rawGet('slipTracker_noti'); if (!t || Notification.permission !== 'granted') return;
+
+  const n = new Date(), hm = `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+
+  if (hm === t && !recordedDays().has(todayISO()) && rawGet('slipTracker_notiSent') !== todayISO()) {
+
+    saveSetting('slipTracker_notiSent', todayISO()); new Notification('SlipTracker', {body:'วันนี้ยังไม่ได้อัปโหลดสลิป'});
+
+  }
+
+}, 30000);
+
+
+
+$('csvBtn').onclick = () => {
+
+  const rows = [['วันที่','เวลา','จำนวนเงิน','ผู้รับ','ธนาคาร'], ...[...txs].sort((a,b)=>a.date.localeCompare(b.date)).map(t => [t.date,t.time,t.amount,t.receiver,t.bank])];
+
+  const csv = '\ufeff' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
+
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+
+  a.download = 'expenses.csv'; a.click();
+
+};
+
+
+
+// ---- render ----
+
+$('month').onchange = render; $('period').onchange = render;
+
+function render() {
+
+  // เดือนที่เลือก
+
+  const months = [...new Set([todayISO().slice(0,7), ...txs.map(t => t.date.slice(0,7))])].sort().reverse();
+
+  const cur = $('month').value || months[0];
+
+  $('month').innerHTML = months.map(m => { const [y, mo] = m.split('-'); return `<option value="${m}" ${m===cur?'selected':''}>${thMonths[mo-1]} ${+y+543}</option>`; }).join('');
+
+  const sel = $('month').value;
+
+  const inMonth = txs.filter(t => t.date.startsWith(sel)).sort((a,b) => (b.date+b.time).localeCompare(a.date+a.time));
+
+
+
+  $('total').textContent = fmt(inMonth.reduce((s,t) => s + (Number(t.amount)||0), 0));
+
+  $('count').textContent = `${inMonth.length} รายการ`;
+
+  $('streak').textContent = streak();
+
+  $('banner').classList.toggle('hidden', recordedDays().has(todayISO()));
+
+
+
+  $('list').innerHTML = inMonth.length ? inMonth.map(t => `
+
+    <div class="bg-white border rounded-xl p-3 flex items-center justify-between gap-2">
+
+      <div class="min-w-0">
+
+        <div class="font-semibold text-sm truncate">${esc(t.receiver) || 'ไม่ระบุชื่อ'}</div>
+
+        <div class="text-xs text-slate-500">${thDate(t.date)} ${esc(t.time)} ${t.bank ? `<span class="bg-slate-100 px-1.5 rounded">${esc(t.bank)}</span>` : ''}</div>
+
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+
+        <b>฿${fmt(t.amount)}</b>
+
+        <button onclick="openForm('${esc(t.id)}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
+
+        <button onclick="del('${esc(t.id)}')" class="text-slate-400 hover:text-red-500">🗑️</button>
+
+      </div>
+
+    </div>`).join('') : '<div class="text-center py-8 text-slate-400 border border-dashed rounded-xl bg-white">ยังไม่มีรายการในเดือนนี้</div>';
+
+
+
+  // chart
+
+  const p = $('period').value, agg = {};
+
+  (p === 'd' ? inMonth : txs).forEach(t => {
+
+    const k = p === 'd' ? t.date : p === 'm' ? t.date.slice(0,7) : t.date.slice(0,4);
+
+    agg[k] = (agg[k] || 0) + (Number(t.amount) || 0);
+
+  });
+
+  const keys = Object.keys(agg).sort();
+
+  const label = k => { const a = k.split('-'); return a.length === 3 ? `${+a[2]} ${thMonths[a[1]-1]}` : a.length === 2 ? `${thMonths[a[1]-1]} ${String(+a[0]+543).slice(2)}` : `${+a[0]+543}`; };
+
+  if (chart) chart.destroy();
+
+  chart = new Chart($('chart'), {type:'bar',
+
+    data:{labels:keys.map(label), datasets:[{data:keys.map(k => agg[k]), backgroundColor:'rgba(79,70,229,.8)', borderRadius:4}]},
+
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}}});
+
+}
+
+render();
+
+</script>
+
 </body>
+
 </html>
